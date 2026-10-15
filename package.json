@@ -1,0 +1,9 @@
+{
+  "name": "glicoponto-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": { "dev": "vite", "build": "tsc -b && vite build", "test": "vitest run", "test:watch": "vitest" },
+  "dependencies": { "@tailwindcss/vite": "latest", "dexie": "latest", "dexie-react-hooks": "latest", "lucide-react": "latest", "react": "^19.0.0", "react-dom": "^19.0.0", "react-router-dom": "^7.0.0", "tailwindcss": "latest" },
+  "devDependencies": { "@testing-library/jest-dom": "latest", "@testing-library/react": "latest", "@testing-library/user-event": "latest", "@types/react": "latest", "@types/react-dom": "latest", "@vitejs/plugin-react": "latest", "fake-indexeddb": "latest", "jsdom": "latest", "typescript": "~5.7.2", "vite": "latest", "vitest": "latest" }
+}

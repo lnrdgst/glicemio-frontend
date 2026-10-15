@@ -1,0 +1,39 @@
+import { describe, expect, it } from 'vitest'
+import { activitySuggestions, insulinCatalog, medicationIdentity, parseActivities, previousInsulin, recentMeal } from './records'
+import { stamp } from '../database/db'
+import { duration, iso, localInput } from './format'
+
+describe('regras locais', () => {
+  it('mantém as dez identidades estáveis do catálogo, sem misturas', () => {
+    expect(insulinCatalog).toHaveLength(10)
+    expect(new Set(insulinCatalog.map(x => x.id)).size).toBe(10)
+    expect(insulinCatalog.filter(x => x.kind === 'Basal/lenta')).toHaveLength(5)
+    expect(insulinCatalog.find(x => x.id === 'nph')?.pharmacologicalClass).toContain('intermediária')
+    expect(insulinCatalog.find(x => x.id === 'regular')?.pharmacologicalClass).toContain('curta')
+  })
+  it('deduplica modalidades sem acentos, caixa ou espaços, preservando apresentação', () => {
+    expect(activitySuggestions([' Musculação ', 'musculacao', 'MUSCULAÇÃO', '  Caminhada   leve ', ''])).toEqual(['Musculação', 'Caminhada leve'])
+    expect(parseActivities('Natação; natacao, Yoga\nyoga')).toEqual(['Natação', 'Yoga'])
+  })
+  it('a identidade de Outra usa nome normalizado, sem misturar insulinas distintas', () => {
+    expect(medicationIdentity('other', '  FÓRMULA  A ')).toBe(medicationIdentity('other', 'formula a'))
+    expect(medicationIdentity('other', 'Fórmula A')).not.toBe(medicationIdentity('other', 'Fórmula B'))
+    expect(medicationIdentity('other', '')).toBeUndefined()
+  })
+  it('usa janela inclusiva e ordena por horário efetivo sem modificar refeições', () => {
+    const meals = [stamp({ kind: 'Almoço', at: iso('2026-10-14T12:00') }), stamp({ kind: 'Lanche', at: iso('2026-10-14T11:00') })]
+    const copy = structuredClone(meals)
+    expect(recentMeal(meals, '2026-10-14T15:00')?.kind).toBe('Almoço')
+    expect(recentMeal(meals, '2026-10-14T15:01')).toBeUndefined()
+    expect(meals).toEqual(copy)
+  })
+  it('não usa dose de registros legados sem identidade', () => {
+    expect(previousInsulin([stamp({ kind: 'Rápida', dose: 12, at: iso('2026-10-14T12:00') })], 'lispro')).toBeUndefined()
+  })
+  it('converte local/ISO sem deslocar horário e rejeita datas vazias ou normalizadas', () => {
+    expect(localInput(iso('2026-10-14T21:15'))).toBe('2026-10-14T21:15')
+    expect(() => iso('')).toThrow(); expect(() => iso('2026-02-30T12:00')).toThrow()
+    expect(duration(iso('2026-10-14T23:30'), iso('2026-10-15T00:30'))).toBe('60 min')
+    expect(duration(iso('2026-10-14T23:30'))).toBe('Em andamento')
+  })
+})
