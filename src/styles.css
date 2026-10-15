@@ -55,6 +55,12 @@ select.field { text-overflow: ellipsis; }
 .glucose-chart-point { stroke:var(--color-panel); stroke-width:2; }
 .glucose-chart-axis { fill:var(--color-muted); font-size:9px; }
 .glucose-chart-empty { min-height:120px; display:grid; place-items:center; text-align:center; }
+.home-glucose-detail { color:inherit; display:block; text-decoration:none; }
+.home-chart-title { color:var(--color-muted); font-size:.82rem; font-weight:700; margin:12px 0 -4px; }
+.glucose-chart.compact { border:0; margin-top:8px; padding:0; }
+.insulin-summary .row { align-items:center; }
+.insulin-summary .row > a, .insulin-history-links a { color:var(--color-copper); font-size:.9rem; text-decoration:none; }
+.insulin-history-links { display:flex; gap:10px; }
 .report-section .card h3 { margin:8px 0 0; font-size:1.15rem; }
 .report-label { display:flex; align-items:center; gap:6px; color:var(--color-muted); font-size:.82rem; }
 .row { flex-wrap: wrap; }
