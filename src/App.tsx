@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Droplets, Dumbbell, Soup, Syringe, TriangleAlert } from 'lucide-react'
 import { db, now, stamp, type Meal } from './database/db'
 import { exportBackup, previewBackup, restoreBackup, type ImportPreview, type ProfileStrategy } from './database/backup'
@@ -46,12 +46,12 @@ function Home() {
   if (!profile) return <Navigate to="/onboarding" replace />
   return <Layout>{location.state?.success && <p role="status">{location.state.success}</p>}<header><span style={{ color: '#d7865b', fontWeight: 800, letterSpacing: 2 }}>GLICOPONTO</span><h1 style={{ marginBottom: 4 }}>Olá, {profile.name}</h1>{profile.diagnosis && <p className="muted">{profile.diagnosis}</p>}</header>
     {glucose && glucoseState ? <Link className="home-record card glucose-card" to={`/detalhes/glucose/${glucose.id}`} style={{ '--glucose-status-color': glucoseState.color } as React.CSSProperties}><span className="muted">Última medição</span><h2 style={{ fontSize: '2.3rem', margin: '6px 0' }}>{glucose.value} <small>mg/dL</small></h2><p className="glucose-status">{glucoseState.label}</p><p className="muted">{glucose.context || 'Sem contexto'} · registrada {eventDateTime(glucose.at)}</p>{glucose.mealId && <p className="muted">Associada a uma refeição</p>}{glucoseGuidance && <p className="glucose-guidance">{glucoseGuidance}</p>}</Link> : <section className="card" style={{ margin: '22px 0' }}><h2>Nenhuma medição ainda</h2><p className="muted">Registre seu primeiro Ponto para acompanhar seu contexto.</p></section>}
-    <InsulinSummary />
-    <BasalReminder profile={profile} insulin={insulin} now={clock} />
     <div className="quick"><Link to="/glicemia" className="quick-glucose"><Droplets size={22} /><br />Registrar glicemia</Link><Link to="/refeicao" className="quick-meal"><Soup size={22} /><br />Registrar refeição</Link><Link to="/insulina" className="quick-insulin"><Syringe size={22} /><br />Registrar insulina</Link><Link to="/treino" className="quick-workout"><Dumbbell size={22} /><br />Registrar treino</Link><Link to="/episodio" className="symptoms quick-symptoms"><TriangleAlert size={22} /><br />Estou com sintomas</Link></div>
     {appointment && <Link className="card home-record" to={`/detalhes/appointments/${appointment.id}`}><b>Próxima consulta</b><p>{eventDateTime(appointment.at)}</p><p className="muted">{appointment.professional || 'Profissional não informado'} · em {Math.ceil((new Date(appointment.at).getTime() - Date.now()) / 86400000)} dias</p></Link>}
-    <HomeList title="Últimas refeições" empty="Nenhuma refeição registrada." items={meals} render={(record: Meal) => <><span>{record.kind}</span><span className="muted">{eventDateTime(record.at)}</span></>} table="meals" />
-    <HomeList title="Últimos treinos" empty="Nenhum treino registrado." items={workouts} render={record => <><span>{record.activity}</span><span className="muted">{duration(record.startedAt, record.endedAt)}</span></>} table="workouts" />
+    <InsulinSummary />
+    <BasalReminder profile={profile} insulin={insulin} now={clock} />
+    <HomeList title="Últimas refeições" empty="Nenhuma refeição registrada." items={meals} render={(record: Meal) => <><span>{record.kind}</span><span className="muted">{eventDateTime(record.at)}</span></>} table="meals" filter="meals" />
+    <HomeList title="Últimos treinos" empty="Nenhum treino registrado." items={workouts} render={record => <><span>{record.activity}</span><span className="muted">{duration(record.startedAt, record.endedAt)}</span></>} table="workouts" filter="workouts" />
   </Layout>
 }
 
@@ -69,11 +69,11 @@ function InsulinSummary() {
   const basal = applications.find(x => x.kind === 'Basal/lenta'); const rapid = applications.find(x => x.kind === 'Rápida')
   if (!basal && !rapid) return <section className="card insulin-summary"><h2>Últimas aplicações de insulina</h2><p className="muted">Nenhuma aplicação registrada.</p></section>
   const line = (label: string, application: typeof basal, divider = false) => application && <Link className="insulin-line" style={{ borderTop: divider ? '1px solid #39322e' : undefined }} to={`/detalhes/insulin/${application.id}`}><div><b>{label}</b>{insulinName(application) && <p>{insulinName(application)}</p>}<p className="muted">{eventDateTime(application.at)}</p></div><strong>{application.dose.toLocaleString('pt-BR')} UI</strong></Link>
-  return <section className="card insulin-summary"><h2>Últimas aplicações de insulina</h2>{line('Basal / lenta', basal)}{line('Rápida', rapid, Boolean(basal))}</section>
+  return <section className="card insulin-summary"><div className="row"><h2>Últimas aplicações de insulina</h2>{basal && rapid ? <span className="insulin-history-links"><Link to="/historico?tipo=insulin&subtipo=basal">Basal</Link><Link to="/historico?tipo=insulin&subtipo=rapida">Rápida</Link></span> : <Link to={basal ? '/historico?tipo=insulin&subtipo=basal' : '/historico?tipo=insulin&subtipo=rapida'}>Ver histórico</Link>}</div>{line('Basal / lenta', basal)}{line('Rápida', rapid, Boolean(basal))}</section>
 }
 
-function HomeList({ title, empty, items, render, table }: { title: string; empty: string; items: any[]; render: (item: any) => React.ReactNode; table: string }) {
-  return <section style={{ marginTop: 22 }}><div className="row"><h2 style={{ fontSize: '1.1rem' }}>{title}</h2><Link to="/historico" style={{ color: '#d7865b' }}>Ver histórico</Link></div><div className="card">{items.length ? items.map(item => <Link className="home-list-item row" key={item.id} to={`/detalhes/${table}/${item.id}`}>{render(item)}</Link>) : <p className="muted">{empty}</p>}</div></section>
+function HomeList({ title, empty, items, render, table, filter }: { title: string; empty: string; items: any[]; render: (item: any) => React.ReactNode; table: string; filter: string }) {
+  return <section style={{ marginTop: 22 }}><div className="row"><h2 style={{ fontSize: '1.1rem' }}>{title}</h2><Link to={`/historico?tipo=${filter}`} style={{ color: '#d7865b' }}>Ver histórico</Link></div><div className="card">{items.length ? items.map(item => <Link className="home-list-item row" key={item.id} to={`/detalhes/${table}/${item.id}`}>{render(item)}</Link>) : <p className="muted">{empty}</p>}</div></section>
 }
 
 function Episode() {
@@ -98,29 +98,30 @@ function Details() {
   return <Layout><Link to="/" className="muted">← Início</Link><section className="card details"><span className="muted">{config.title}</span><h1>{detail}</h1><p>{eventDateTime(at)}</p>{record.note && <p className="muted">{record.note}</p>}{record.description && <p className="muted">{record.description}</p>}<div className="actions"><Link className="primary" to={config.edit === 'episodio' ? `/episodio/${id}/editar` : `/${config.edit}/${id}/editar`}>Editar</Link><Delete run={() => db.table(table).delete(id)} /></div></section></Layout>
 }
 
-type HistoryFilter = 'all' | 'glucose' | 'meals' | 'insulin' | 'workouts' | 'episodes'
+type HistoryFilter = 'all' | 'glucose' | 'meals' | 'insulin' | 'workouts' | 'episodes' | 'appointments'
 type Line = { id: string; at: string; title: string; detail?: string; table: string; recordId: string }
-const historyFilters: { value: HistoryFilter; label: string }[] = [{ value: 'all', label: 'Todos' }, { value: 'glucose', label: 'Glicemias' }, { value: 'meals', label: 'Refeições' }, { value: 'insulin', label: 'Insulinas' }, { value: 'workouts', label: 'Treinos' }, { value: 'episodes', label: 'Episódios' }]
+const historyFilters: { value: HistoryFilter; label: string }[] = [{ value: 'all', label: 'Todos' }, { value: 'glucose', label: 'Glicemias' }, { value: 'meals', label: 'Refeições' }, { value: 'insulin', label: 'Insulinas' }, { value: 'workouts', label: 'Treinos' }, { value: 'episodes', label: 'Episódios' }, { value: 'appointments', label: 'Consultas' }]
 const sortLines = (lines: Line[]) => lines.sort((a, b) => +new Date(b.at) - +new Date(a.at) || a.table.localeCompare(b.table) || a.id.localeCompare(b.id))
 
 function History() {
-  const [filter, setFilter] = useState<HistoryFilter>('all'); const [shown, setShown] = useState(20)
+  const [search, setSearch] = useSearchParams(); const requested = historyFilters.some(item => item.value === search.get('tipo')) ? search.get('tipo') as HistoryFilter : 'all'; const [filter, setFilter] = useState<HistoryFilter>(requested); const [shown, setShown] = useState(20); const subtype = search.get('subtipo')
+  useEffect(() => { setFilter(requested); setShown(20) }, [requested])
   const history = useLiveQuery(async () => {
     const take = shown + 1
     const [glucose, meals, insulin, workouts, episodes, appointments] = await Promise.all([
       filter === 'all' || filter === 'glucose' ? db.glucose.orderBy('at').reverse().limit(take).toArray() : [],
       filter === 'all' || filter === 'meals' ? db.meals.orderBy('at').reverse().limit(take).toArray() : [],
-      filter === 'all' || filter === 'insulin' ? db.insulin.orderBy('at').reverse().limit(take).toArray() : [],
+      filter === 'all' || filter === 'insulin' ? db.insulin.orderBy('at').reverse().limit(take).toArray().then(records => subtype === 'basal' ? records.filter(record => record.kind === 'Basal/lenta') : subtype === 'rapida' ? records.filter(record => record.kind === 'Rápida') : records) : [],
       filter === 'all' || filter === 'workouts' ? db.workouts.orderBy('startedAt').reverse().limit(take).toArray() : [],
       filter === 'all' || filter === 'episodes' ? db.episodes.orderBy('startedAt').reverse().limit(take).toArray() : [],
-      filter === 'all' ? db.appointments.orderBy('at').reverse().limit(take).toArray() : [],
+      filter === 'all' || filter === 'appointments' ? db.appointments.orderBy('at').reverse().limit(take).toArray() : [],
     ])
     const ordered = sortLines([...glucose.map(x => ({ id: x.id, recordId: x.id, at: x.at, title: `${x.value} mg/dL`, detail: x.context, table: 'glucose' })), ...meals.map(x => ({ id: x.id, recordId: x.id, at: x.at, title: x.kind, detail: x.description, table: 'meals' })), ...insulin.map(x => ({ id: x.id, recordId: x.id, at: x.at, title: `Insulina ${x.kind}`, detail: `${insulinName(x) ? `${insulinName(x)} · ` : ''}${x.dose.toLocaleString('pt-BR')} UI`, table: 'insulin' })), ...workouts.map(x => ({ id: x.id, recordId: x.id, at: x.startedAt, title: 'Treino', detail: x.activity, table: 'workouts' })), ...episodes.map(x => ({ id: x.id, recordId: x.id, at: x.startedAt, title: 'Episódio', detail: x.symptoms.join(', '), table: 'episodes' })), ...appointments.map(x => ({ id: x.id, recordId: x.id, at: x.at, title: 'Consulta', detail: x.professional, table: 'appointments' }))])
     return { lines: ordered.slice(0, shown), hasMore: ordered.length > shown }
-  }, [filter, shown]) ?? { lines: [], hasMore: false }
+  }, [filter, shown, subtype]) ?? { lines: [], hasMore: false }
   const { lines, hasMore } = history
   const groups = lines.reduce<{ key: string; title: string; lines: Line[] }[]>((days, line) => { const key = localDayKey(line.at); const current = days.at(-1); if (current?.key === key) current.lines.push(line); else days.push({ key, title: dayHeading(line.at), lines: [line] }); return days }, [])
-  const changeFilter = (value: HistoryFilter) => { setFilter(value); setShown(20) }
+  const changeFilter = (value: HistoryFilter) => { setSearch(value === 'all' ? {} : { tipo: value }); setShown(20) }
   return <Layout><h1>Histórico</h1><div className="history-filters" role="group" aria-label="Filtrar histórico">{historyFilters.map(item => <button key={item.value} type="button" className={filter === item.value ? 'secondary active' : 'secondary'} onClick={() => changeFilter(item.value)}>{item.label}</button>)}</div>{lines.length ? <><div className="timeline">{groups.map(group => <section className="history-day" key={group.key}><h2>{group.title}</h2>{group.lines.map(line => <div className="item" key={`${line.table}-${line.id}`}><Link className="history-link" to={`/detalhes/${line.table}/${line.recordId}`}><b>{time(line.at)} · {line.title}</b>{line.detail && <span className="muted">{line.detail}</span>}</Link></div>)}</section>)}</div>{hasMore && <button className="secondary history-more" type="button" onClick={() => setShown(value => value + 20)}>Carregar registros anteriores</button>}</> : <section className="card"><p>Nenhum registro neste filtro.</p></section>}</Layout>
 }
 
