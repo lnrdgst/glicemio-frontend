@@ -105,6 +105,21 @@ describe('data e hora nativas separadas', () => {
 })
 
 describe('persistência dos formulários', () => {
+  it('salva tipo de atendimento e texto de outro sem invalidar consultas legadas', async () => {
+    const legacy = stamp({ at: iso('2026-10-20T09:00'), professional: 'Profissional legado' })
+    await db.appointments.add(legacy)
+    open('/consulta')
+    change('Tipo de atendimento', 'other')
+    change('Informe o tipo de atendimento', 'Fisioterapeuta')
+    change('Nome do profissional (opcional)', 'Ana')
+    await save()
+    await screen.findByRole('status')
+    const appointments = await db.appointments.toArray()
+    expect(appointments).toHaveLength(2)
+    expect(appointments.find(record => record.id !== legacy.id)).toMatchObject({ attendanceType: 'other', attendanceTypeOther: 'Fisioterapeuta', professional: 'Ana' })
+    expect(await db.appointments.get(legacy.id)).toEqual(legacy)
+  })
+
   it.each([['glicemia', 'glucose'], ['refeicao', 'meals'], ['insulina', 'insulin'], ['treino', 'workouts']])('salva %s, atualiza Home/Histórico e recupera após reabrir', async (kind, table) => {
     const view = open(`/${kind}`); await fill(kind); await save()
     expect(await screen.findByRole('status')).toHaveTextContent('Registro salvo')

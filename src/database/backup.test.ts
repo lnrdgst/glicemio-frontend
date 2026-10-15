@@ -7,14 +7,15 @@ beforeEach(async () => { await Promise.all(db.tables.map(table => table.clear())
 
 it('exporta o formato versionado e restaura um backup legado preservando IDs e vínculos', async () => {
   const meal = stamp({ kind: 'Almoço', at: now() }); const episode = stamp({ startedAt: now(), symptoms: ['Suor'] }); const glucose = stamp({ value: 120, at: now(), mealId: meal.id, episodeId: episode.id })
-  await db.profiles.add({ id: 'local', name: 'Teste', createdAt: now(), updatedAt: now() }); await db.meals.add(meal); await db.episodes.add(episode); await db.glucose.add(glucose)
+  const appointment = stamp({ at: now(), attendanceType: 'endocrinologist' as const, professional: 'Dra. Joana' })
+  await db.profiles.add({ id: 'local', name: 'Teste', createdAt: now(), updatedAt: now() }); await db.meals.add(meal); await db.episodes.add(episode); await db.glucose.add(glucose); await db.appointments.add(appointment)
   const backup = await exportBackup()
   expect(backup).toMatchObject({ format: 'glicoponto-backup', version: 1 }); expect(backup.data.glucose[0]).toEqual(glucose)
   await Promise.all(db.tables.map(table => table.clear()))
   const preview = await previewBackup(JSON.stringify(backup.data))
   expect(preview.sourceVersion).toBe('legacy'); expect(preview.relationshipErrors).toEqual([])
   await restoreBackup(preview, 'keep')
-  expect(await db.glucose.get(glucose.id)).toEqual(glucose); expect(await db.meals.get(meal.id)).toEqual(meal); expect(await db.episodes.get(episode.id)).toEqual(episode)
+  expect(await db.glucose.get(glucose.id)).toEqual(glucose); expect(await db.meals.get(meal.id)).toEqual(meal); expect(await db.episodes.get(episode.id)).toEqual(episode); expect(await db.appointments.get(appointment.id)).toEqual(appointment)
 })
 
 it('não sobrescreve registros existentes e informa conflito na prévia', async () => {

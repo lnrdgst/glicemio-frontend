@@ -47,7 +47,7 @@ it('salva consulta e a apresenta como próxima na Home', async () => {
   const [date, time] = future.toISOString().slice(0, 16).split('T')
   fireEvent.change(screen.getByLabelText('Data'), { target: { value: date } })
   fireEvent.change(screen.getByLabelText('Hora'), { target: { value: time } })
-  fireEvent.change(screen.getByLabelText('Profissional'), { target: { value: 'Profissional de teste' } })
+  fireEvent.change(screen.getByLabelText('Nome do profissional (opcional)'), { target: { value: 'Profissional de teste' } })
   await userEvent.click(screen.getByRole('button', { name: 'Salvar registro' })); expect(await screen.findByText('Próxima consulta')).toBeInTheDocument()
   expect(await db.appointments.count()).toBe(1)
 })
