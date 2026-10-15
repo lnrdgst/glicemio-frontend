@@ -37,7 +37,7 @@ it('edita refeição, treino e consulta sem criar duplicatas', async () => {
   await db.meals.add(meal); await db.workouts.add(workout); await db.appointments.add(appointment)
   const view = open('/detalhes/meals/' + meal.id); await edit(); change('Tipo de refeição', 'Jantar'); await save(); expect((await db.meals.toArray())).toHaveLength(1); expect((await db.meals.get(meal.id))?.kind).toBe('Jantar')
   view.unmount(); open('/detalhes/workouts/' + workout.id); await edit(); change('Atividade', 'Corrida'); await save(); expect((await db.workouts.toArray())).toHaveLength(1); expect((await db.workouts.get(workout.id))?.activity).toBe('Corrida')
-  cleanup(); open('/detalhes/appointments/' + appointment.id); await edit(); change('Tipo de atendimento', 'endocrinologist'); change('Nome do profissional (opcional)', 'Bia'); await save(); expect((await db.appointments.toArray())).toHaveLength(1); expect(await db.appointments.get(appointment.id)).toMatchObject({ professional: 'Bia', attendanceType: 'endocrinologist' })
+  cleanup(); open('/detalhes/appointments/' + appointment.id); await edit(); change('Tipo de atendimento', 'endocrinologist'); change('Nome do profissional (opcional)', 'Bia'); await save(); expect((await db.appointments.toArray())).toHaveLength(1); expect(await db.appointments.get(appointment.id)).toMatchObject({ professional: 'Bia', attendanceType: 'endocrinologist' }); cleanup(); open('/consulta/' + appointment.id + '/editar'); expect(await screen.findByLabelText('Tipo de atendimento')).toHaveValue('endocrinologist')
 })
 
 it('corrige somente o horário de uma insulina preservando dose, medicamento e identificador', async () => {

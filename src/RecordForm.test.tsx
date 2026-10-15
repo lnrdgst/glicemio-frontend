@@ -116,8 +116,20 @@ describe('persistência dos formulários', () => {
     await screen.findByRole('status')
     const appointments = await db.appointments.toArray()
     expect(appointments).toHaveLength(2)
-    expect(appointments.find(record => record.id !== legacy.id)).toMatchObject({ attendanceType: 'other', attendanceTypeOther: 'Fisioterapeuta', professional: 'Ana' })
+    const created = appointments.find(record => record.id !== legacy.id)!
+    expect(created).toMatchObject({ attendanceType: 'other', attendanceTypeOther: 'Fisioterapeuta', professional: 'Ana' })
     expect(await db.appointments.get(legacy.id)).toEqual(legacy)
+    cleanup()
+    open(`/consulta/${created.id}/editar`)
+    expect(await screen.findByLabelText('Tipo de atendimento')).toHaveValue('other')
+    expect(screen.getByLabelText('Informe o tipo de atendimento')).toHaveValue('Fisioterapeuta')
+  })
+
+  it.each(['general', 'endocrinologist', 'nutritionist', 'ophthalmologist'] as const)('recupera o tipo de atendimento %s ao reabrir a edição', async attendanceType => {
+    const appointment = stamp({ at: iso('2026-10-20T09:00'), attendanceType })
+    await db.appointments.add(appointment)
+    open(`/consulta/${appointment.id}/editar`)
+    expect(await screen.findByLabelText('Tipo de atendimento')).toHaveValue(attendanceType)
   })
 
   it.each([['glicemia', 'glucose'], ['refeicao', 'meals'], ['insulina', 'insulin'], ['treino', 'workouts']])('salva %s, atualiza Home/Histórico e recupera após reabrir', async (kind, table) => {
