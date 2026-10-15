@@ -9,6 +9,7 @@ import { RecordForm, type RecordKind } from './RecordForm'
 import { ProfileForm } from './ProfileForm'
 import { insulinName } from './shared/records'
 import { classifyGlucose, hypoglycemiaGuidance } from './shared/glucose'
+import { shouldShowBasalReminder } from './shared/basalReminder'
 import { Button, Layout, usePersistence } from './shared/ui'
 import { dateTime, dayHeading, duration, eventDateTime, localDayKey, time } from './shared/format'
 
@@ -37,17 +38,30 @@ function Home() {
   const meals = useLiveQuery(() => db.meals.orderBy('at').reverse().limit(3).toArray(), []) ?? []
   const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().limit(3).toArray(), []) ?? []
   const appointment = useLiveQuery(() => db.appointments.filter(x => new Date(x.at) > new Date()).sortBy('at'), [])?.[0]
+  const insulin = useLiveQuery(() => db.insulin.orderBy('at').reverse().toArray(), []) ?? []
+  const [clock, setClock] = useState(() => new Date())
+  useEffect(() => { const update = () => setClock(new Date()); const timer = window.setInterval(update, 60000); document.addEventListener('visibilitychange', update); return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', update) } }, [])
   const glucoseState = glucose ? classifyGlucose(glucose.value) : undefined; const glucoseGuidance = glucoseState ? hypoglycemiaGuidance(glucoseState) : undefined
   if (profile === undefined) return <main className="shell" />
   if (!profile) return <Navigate to="/onboarding" replace />
   return <Layout>{location.state?.success && <p role="status">{location.state.success}</p>}<header><span style={{ color: '#d7865b', fontWeight: 800, letterSpacing: 2 }}>GLICOPONTO</span><h1 style={{ marginBottom: 4 }}>Olá, {profile.name}</h1>{profile.diagnosis && <p className="muted">{profile.diagnosis}</p>}</header>
     {glucose && glucoseState ? <Link className="home-record card glucose-card" to={`/detalhes/glucose/${glucose.id}`} style={{ '--glucose-status-color': glucoseState.color } as React.CSSProperties}><span className="muted">Última medição</span><h2 style={{ fontSize: '2.3rem', margin: '6px 0' }}>{glucose.value} <small>mg/dL</small></h2><p className="glucose-status">{glucoseState.label}</p><p className="muted">{glucose.context || 'Sem contexto'} · registrada {eventDateTime(glucose.at)}</p>{glucose.mealId && <p className="muted">Associada a uma refeição</p>}{glucoseGuidance && <p className="glucose-guidance">{glucoseGuidance}</p>}</Link> : <section className="card" style={{ margin: '22px 0' }}><h2>Nenhuma medição ainda</h2><p className="muted">Registre seu primeiro Ponto para acompanhar seu contexto.</p></section>}
     <InsulinSummary />
+    <BasalReminder profile={profile} insulin={insulin} now={clock} />
     <div className="quick"><Link to="/glicemia" className="quick-glucose"><Droplets size={22} /><br />Registrar glicemia</Link><Link to="/refeicao" className="quick-meal"><Soup size={22} /><br />Registrar refeição</Link><Link to="/insulina" className="quick-insulin"><Syringe size={22} /><br />Registrar insulina</Link><Link to="/treino" className="quick-workout"><Dumbbell size={22} /><br />Registrar treino</Link><Link to="/episodio" className="symptoms quick-symptoms"><TriangleAlert size={22} /><br />Estou com sintomas</Link></div>
+    {appointment && <Link className="card home-record" to={`/detalhes/appointments/${appointment.id}`}><b>Próxima consulta</b><p>{eventDateTime(appointment.at)}</p><p className="muted">{appointment.professional || 'Profissional não informado'} · em {Math.ceil((new Date(appointment.at).getTime() - Date.now()) / 86400000)} dias</p></Link>}
     <HomeList title="Últimas refeições" empty="Nenhuma refeição registrada." items={meals} render={(record: Meal) => <><span>{record.kind}</span><span className="muted">{eventDateTime(record.at)}</span></>} table="meals" />
     <HomeList title="Últimos treinos" empty="Nenhum treino registrado." items={workouts} render={record => <><span>{record.activity}</span><span className="muted">{duration(record.startedAt, record.endedAt)}</span></>} table="workouts" />
-    {appointment && <Link className="card home-record" to={`/detalhes/appointments/${appointment.id}`}><b>Próxima consulta</b><p>{eventDateTime(appointment.at)}</p><p className="muted">{appointment.professional || 'Profissional não informado'} · em {Math.ceil((new Date(appointment.at).getTime() - Date.now()) / 86400000)} dias</p></Link>}
   </Layout>
+}
+
+function BasalReminder({ profile, insulin, now: current }: { profile: any; insulin: any[]; now: Date }) {
+  const nav = useNavigate(); const basal = insulin.filter(item => item.kind === 'Basal/lenta'); const last = basal[0]; const today = current.toLocaleDateString('en-CA'); const key = 'glicoponto-basal-reminder'
+  const [, refresh] = useState(0)
+  const state = (() => { try { return JSON.parse(localStorage.getItem(key) || '{}') } catch { return {} } })(); const show = shouldShowBasalReminder({ enabled: profile.basalReminderEnabled, time: profile.basalReminderTime, now: current, lastBasalAt: last?.at, basalToday: basal.some(item => new Date(item.at).toLocaleDateString('en-CA') === today), laterUntil: state.laterUntil, ignoredDay: state.ignoredDay })
+  if (!show) return null
+  const save = (value: object) => { localStorage.setItem(key, JSON.stringify(value)); refresh(value => value + 1) }
+  return <section className="card basal-reminder"><b>Insulina basal — lembrete</b><p>Ainda não há registro da sua insulina basal para hoje. Deseja registrar agora?</p>{last && <p className="muted">Último registro: {eventDateTime(last.at)}.</p>}<p className="muted">A ausência de registro não confirma ausência de aplicação.</p><div className="actions"><button className="primary" onClick={() => nav('/insulina')}>Registrar agora</button><button className="secondary" onClick={() => save({ laterUntil: Date.now() + 15 * 60000 })}>Lembrar mais tarde</button><button className="secondary" onClick={() => save({ ignoredDay: today })}>Ignorar hoje</button></div></section>
 }
 
 function InsulinSummary() {
@@ -155,8 +169,11 @@ function BackupActions({ onRestored }: { onRestored?: () => void }) {
 
 function More() {
   const profile = useLiveQuery(() => db.profiles.get('local'), []); const nav = useNavigate()
-  const clear = async () => { if (confirm('Excluir todos os dados locais deste dispositivo? Esta ação não pode ser desfeita.')) { await db.transaction('rw', db.tables, () => Promise.all(db.tables.map(table => table.clear()))); nav('/onboarding') } }
-  return <Layout><h1>Mais</h1><div className="more-sections"><section className="card more-card"><h2>Perfil</h2>{profile && <ProfileForm key={profile.id} profile={profile} />}</section><section className="card more-card"><h2>Consultas</h2><Link className="primary" to="/consulta">Cadastrar consulta</Link></section><section className="card more-card"><h2>Privacidade</h2><BackupActions /><button className="danger" onClick={clear}>Excluir dados locais</button></section></div></Layout>
+  const appointment = useLiveQuery(() => db.appointments.filter(item => new Date(item.at) > new Date()).sortBy('at'), [])?.[0]
+  const [code, setCode] = useState<string>(); const [typed, setTyped] = useState(''); const [deleting, setDeleting] = useState(false)
+  const beginDelete = () => { const values = new Uint32Array(1); crypto.getRandomValues(values); setCode(String(values[0] % 1000000).padStart(6, '0')); setTyped('') }
+  const clear = async () => { if (!code || typed !== code) return; setDeleting(true); await db.transaction('rw', db.tables, () => Promise.all(db.tables.map(table => table.clear()))); nav('/onboarding') }
+  return <Layout><h1>Mais</h1><div className="more-sections"><section className="card more-card"><h2>Perfil</h2>{profile && <ProfileForm key={profile.id} profile={profile} />}</section><section className="card more-card"><h2>Consultas</h2>{appointment ? <><Link className="appointment-summary" to={`/detalhes/appointments/${appointment.id}`}><b>Próxima consulta em {Math.ceil((new Date(appointment.at).getTime() - Date.now()) / 86400000)} dias</b><span>{eventDateTime(appointment.at)}</span></Link><Link className="secondary" to="/consulta">Cadastrar nova consulta</Link></> : <><p className="muted">Nenhuma consulta agendada</p><Link className="primary" to="/consulta">Cadastrar consulta</Link></>}</section><section className="card more-card"><h2>Privacidade</h2><BackupActions />{!code ? <button className="danger" onClick={beginDelete}>Excluir dados locais</button> : <div className="delete-confirm"><p>Esta ação eliminará os registros locais deste dispositivo. Exporte um JSON antes de continuar.</p><p>Digite o código <b>{code}</b> para confirmar.</p><input className="field" inputMode="numeric" maxLength={6} value={typed} onChange={event => setTyped(event.target.value.replace(/\D/g, ''))} aria-label="Código de confirmação" /><div className="actions"><button className="danger" disabled={typed !== code || deleting} onClick={() => void clear()}>{deleting ? 'Excluindo…' : 'Confirmar exclusão'}</button><button className="secondary" disabled={deleting} onClick={() => setCode(undefined)}>Cancelar</button></div></div>}</section></div></Layout>
 }
 
 function AppRoutes() { return <Routes><Route path="/onboarding" element={<Onboarding />} /><Route path="/" element={<Home />} /><Route path="/glicemia" element={<RecordForm kind="glicemia" />} /><Route path="/glicemia/:id/editar" element={<RecordForm kind="glicemia" />} /><Route path="/refeicao" element={<RecordForm kind="refeicao" />} /><Route path="/refeicao/:id/editar" element={<RecordForm kind="refeicao" />} /><Route path="/insulina" element={<RecordForm kind="insulina" />} /><Route path="/insulina/:id/editar" element={<RecordForm kind="insulina" />} /><Route path="/treino" element={<RecordForm kind="treino" />} /><Route path="/treino/:id/editar" element={<RecordForm kind="treino" />} /><Route path="/consulta" element={<RecordForm kind="consulta" />} /><Route path="/consulta/:id/editar" element={<RecordForm kind="consulta" />} /><Route path="/episodio" element={<Episode />} /><Route path="/episodio/:id/editar" element={<Episode />} /><Route path="/detalhes/:table/:id" element={<Details />} /><Route path="/historico" element={<History />} /><Route path="/relatorio" element={<Report />} /><Route path="/mais" element={<More />} /><Route path="*" element={<Navigate to="/" />} /></Routes> }

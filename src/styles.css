@@ -76,6 +76,14 @@ select.field { text-overflow: ellipsis; }
 .backup-preview { border:1px solid #574c46; border-radius:12px; padding:12px; }
 .backup-preview p { margin:0 0 8px; }
 .backup-preview ul { margin:0; padding-left:20px; }
+.basal-reminder { border-color:#A99BCB; margin:16px 0; }
+.appointment-summary { color:inherit; display:grid; gap:4px; text-decoration:none; }
+.delete-confirm { border:1px solid #574c46; border-radius:12px; padding:12px; }
+.item:has(a[href*="/meals/"]):before { background:#C989A2; }
+.item:has(a[href*="/insulin/"]):before { background:#A99BCB; }
+.item:has(a[href*="/workouts/"]):before { background:#71AFA5; }
+.item:has(a[href*="/episodes/"]):before { background:#A65B67; }
+.item:has(a[href*="/appointments/"]):before { background:#F5F0EA; }
 .profile-form fieldset { display: grid; gap: 14px; }
 .profile-form .label, .profile-form .muted { margin: 0; }
 .profile-form textarea.field { min-height: 112px; line-height: 1.4; resize: vertical; }
