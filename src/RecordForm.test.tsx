@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from './App'
 import { db, GlicopontoDB, now, stamp } from './database/db'
-import { dateTime, iso, localInput, time } from './shared/format'
+import { iso, localInput, time } from './shared/format'
 
 const open = (route: string) => render(<MemoryRouter initialEntries={[route]}><App /></MemoryRouter>)
 const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
@@ -79,7 +79,7 @@ describe('data e hora nativas separadas', () => {
       open('/historico')
       const row = (await screen.findByText(/Almoço/)).closest('.item') as HTMLElement
       expect(within(row).getByText(`${time(recorded.at)} · Almoço`)).toBeInTheDocument()
-      expect(within(row).getByText(dateTime(recorded.at))).toBeInTheDocument()
+      expect(screen.getByText(/11\/10\/2026/)).toBeInTheDocument()
     } finally { reopened.close() }
   })
 
@@ -117,7 +117,7 @@ describe('persistência dos formulários', () => {
     const reopened = new GlicopontoDB(db.name)
     try { expect(await reopened.table(table).toArray()).toEqual(records) } finally { reopened.close() }
     open('/historico')
-    expect(await screen.findByRole('button', { name: 'Excluir' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /Detalhes|mg\/dL|Almoço|Insulina|Treino/ })).toBeInTheDocument()
   })
   it.each([['glicemia', 'glucose'], ['refeicao', 'meals'], ['insulina', 'insulin'], ['treino', 'workouts']])('mostra falha de %s, mantém os dados e permite tentar novamente', async (kind, table) => {
     const spy = vi.spyOn(db[table as 'glucose' | 'meals' | 'insulin' | 'workouts'], 'add').mockRejectedValueOnce(new Error('QuotaExceededError'))

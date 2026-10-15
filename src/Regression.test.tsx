@@ -71,7 +71,7 @@ it('exporta JSON completo incluindo legados, sem modificar o armazenamento', asy
   const blob = create.mock.calls[0][0] as unknown as Blob
   const text = await new Promise<string>(resolve => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.readAsText(blob) })
   const exported = JSON.parse(text)
-  expect(exported.insulin).toEqual([legacy]); expect(Object.keys(exported)).toHaveLength(7)
+  expect(exported).toMatchObject({ format: 'glicoponto-backup', version: 1 }); expect(exported.data.insulin).toEqual([legacy]); expect(Object.keys(exported.data)).toHaveLength(7)
   expect(await db.insulin.get(legacy.id)).toEqual(legacy); expect(revoke).toHaveBeenCalledWith('blob:test')
 })
 
@@ -79,10 +79,9 @@ it('exclui somente após confirmação e preserva os outros registros', async ()
   const glucose = stamp({ value: 123, at: now() }); const meal = stamp({ kind: 'Almoço', at: now() })
   await db.glucose.add(glucose); await db.meals.add(meal)
   const confirmation = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
-  open('/historico'); await screen.findByText(/123 mg\/dL/)
-  const row = screen.getByText(/123 mg\/dL/).closest('.item')!
-  await userEvent.click(within(row as HTMLElement).getByRole('button', { name: 'Excluir' })); expect(await db.glucose.count()).toBe(1)
-  await userEvent.click(within(row as HTMLElement).getByRole('button', { name: 'Excluir' })); await waitFor(async () => expect(await db.glucose.count()).toBe(0))
+  open('/historico'); await userEvent.click(await screen.findByRole('link', { name: /123 mg\/dL/ }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Excluir' })); expect(await db.glucose.count()).toBe(1)
+  await userEvent.click(screen.getByRole('button', { name: 'Excluir' })); await waitFor(async () => expect(await db.glucose.count()).toBe(0))
   expect(confirmation).toHaveBeenCalledTimes(2); expect(await db.meals.get(meal.id)).toEqual(meal)
 })
 

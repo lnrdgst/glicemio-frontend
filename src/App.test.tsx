@@ -97,4 +97,14 @@ describe('onboarding', () => {
     await db.insulin.add(stamp({ kind: 'Rápida', dose: 6, at: '2026-01-01T12:00:00.000Z' }))
     expect(await screen.findByText('6 UI')).toBeTruthy()
   })
+
+  it('mantém as ações rápidas e aplica classes de categoria para a paleta', async () => {
+    await db.profiles.put({ id: 'local', name: 'Lia', createdAt: now(), updatedAt: now() })
+    renderApp()
+    expect((await screen.findByRole('link', { name: /Registrar glicemia/ })).className).toContain('quick-glucose')
+    expect(screen.getByRole('link', { name: /Registrar refeição/ }).className).toContain('quick-meal')
+    expect(screen.getByRole('link', { name: /Registrar insulina/ }).className).toContain('quick-insulin')
+    expect(screen.getByRole('link', { name: /Registrar treino/ }).className).toContain('quick-workout')
+    expect(screen.getByRole('link', { name: /Estou com sintomas/ }).className).toContain('quick-symptoms')
+  })
 })
