@@ -13,6 +13,12 @@ const createTitles: Record<RecordKind, string> = { glicemia: 'Registrar glicemia
 const editTitles: Record<RecordKind, string> = { glicemia: 'Editar glicemia', refeicao: 'Editar refeição', insulina: 'Editar aplicação de insulina', treino: 'Editar treino', consulta: 'Editar consulta' }
 const tables: Record<RecordKind, 'glucose' | 'meals' | 'insulin' | 'workouts' | 'appointments'> = { glicemia: 'glucose', refeicao: 'meals', insulina: 'insulin', treino: 'workouts', consulta: 'appointments' }
 const toIso = (value: string) => { try { return iso(value) } catch { throw new ValidationError('Informe uma data e um horário válidos.') } }
+const appointmentIso = (value: string) => {
+  const [date = '', time = ''] = value.split('T')
+  if (!date) throw new ValidationError('Informe a data da consulta.')
+  if (!time) throw new ValidationError('Informe o horário da consulta.')
+  return toIso(value)
+}
 
 function ActivityInput({ value, options, onChange }: { value: string; options: string[]; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false); const [active, setActive] = useState(-1); const listId = useId()
@@ -25,7 +31,7 @@ export function RecordForm({ kind }: { kind: RecordKind }) {
   const { id: editId } = useParams(); const nav = useNavigate(); const [params] = useSearchParams(); const editing = Boolean(editId); const table = tables[kind]
   const { run, saving, error } = usePersistence(); const existing = useLiveQuery(() => editId ? db.table(table).get(editId).then(value => value ?? null) : Promise.resolve(null), [editId, table]) as any
   const meals = useLiveQuery(() => db.meals.orderBy('at').reverse().toArray(), []) ?? []; const applications = useLiveQuery(() => db.insulin.orderBy('at').reverse().toArray(), []) ?? []; const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().toArray(), []) ?? []; const profile = useLiveQuery(() => db.profiles.get('local'), [])
-  const [at, setAt] = useState(localInput); const [mealKind, setMealKind] = useState(() => suggestedMealKind(localInput()) || ''); const [mealKindTouched, setMealKindTouched] = useState(false); const [context, setContext] = useState('Não informado'); const [contextTouched, setContextTouched] = useState(false); const [linkedMealId, setLinkedMealId] = useState(''); const [associationConfirmed, setAssociationConfirmed] = useState(false)
+  const [at, setAt] = useState(() => kind === 'consulta' ? '' : localInput()); const [mealKind, setMealKind] = useState(() => suggestedMealKind(localInput()) || ''); const [mealKindTouched, setMealKindTouched] = useState(false); const [context, setContext] = useState('Não informado'); const [contextTouched, setContextTouched] = useState(false); const [linkedMealId, setLinkedMealId] = useState(''); const [associationConfirmed, setAssociationConfirmed] = useState(false)
   const [insulinKind, setInsulinKind] = useState<Insulin['kind']>('Rápida'); const [medicationId, setMedicationId] = useState(''); const [medicationTouched, setMedicationTouched] = useState(false); const [otherName, setOtherName] = useState(''); const [dose, setDose] = useState(''); const [doseConfirmed, setDoseConfirmed] = useState(false); const [mealId, setMealId] = useState('')
   const [attendanceType, setAttendanceType] = useState(existing?.attendanceType || ''); const [attendanceTypeOther, setAttendanceTypeOther] = useState(existing?.attendanceTypeOther || '')
   const [activity, setActivity] = useState(''); const [startDate, setStartDate] = useState(() => localInput().slice(0, 10)); const [startTime, setStartTime] = useState(''); const [endDate, setEndDate] = useState(() => localInput().slice(0, 10)); const [endTime, setEndTime] = useState(''); const [hydratedId, setHydratedId] = useState<string>(); const [dirty, setDirty] = useState(false)
@@ -40,7 +46,7 @@ export function RecordForm({ kind }: { kind: RecordKind }) {
   if (editing && (existing === undefined || (existing && hydratedId !== existing.id))) return <Layout><h1>Carregando registro…</h1></Layout>
   if (editing && !existing) return <Layout><Link to="/historico" className="muted">← Voltar</Link><section className="card"><h1>Registro não encontrado</h1></section></Layout>
   const submit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const form = new FormData(event.currentTarget); const text = (name: string) => String(form.get(name) ?? '').trim(); void run(async () => {
-    const effectiveAt = kind === 'treino' ? toIso(`${startDate}T${startTime}`) : toIso(at); let update: object
+    const effectiveAt = kind === 'treino' ? toIso(`${startDate}T${startTime}`) : kind === 'consulta' ? appointmentIso(at) : toIso(at); let update: object
     if (kind === 'glicemia') { const value = Number(text('value')); if (!Number.isFinite(value) || value <= 0) throw new ValidationError('Informe um valor de glicemia maior que zero.'); update = { value, at: effectiveAt, context, note: text('note') || undefined, mealId: context === 'Após refeição' ? linkedMealId || undefined : undefined, episodeId: existing?.episodeId || params.get('episode') || undefined } }
     else if (kind === 'refeicao') { if (!mealKind) throw new ValidationError('Selecione o tipo de refeição.'); update = { kind: mealKind, at: effectiveAt, description: text('description') || undefined } }
     else if (kind === 'insulina') { const quantity = Number(dose); if (!Number.isFinite(quantity) || quantity <= 0) throw new ValidationError('Informe a dose efetivamente aplicada, maior que zero.'); if (!doseConfirmed) throw new ValidationError('Confirme que a dose corresponde à quantidade efetivamente aplicada.'); if (medicationId === 'other' && !cleanName(otherName)) throw new ValidationError('Informe o nome da insulina utilizada.'); update = { kind: insulinKind, dose: quantity, at: effectiveAt, note: text('note') || undefined, medicationId: medicationId || undefined, medicationName: medication?.name || (medicationId === 'other' ? cleanName(otherName) : undefined), medicationKey: identity, mealId: insulinKind === 'Rápida' ? mealId || undefined : undefined } }

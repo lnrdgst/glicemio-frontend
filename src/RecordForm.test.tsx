@@ -37,7 +37,7 @@ beforeEach(async () => {
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('data e hora nativas separadas', () => {
-  it.each(['refeicao', 'glicemia', 'insulina', 'consulta'])('inicializa %s com a data e a hora locais atuais', kind => {
+  it.each(['refeicao', 'glicemia', 'insulina'])('inicializa %s com a data e a hora locais atuais', kind => {
     vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-10-14T15:20:00.000Z'))
     const current = localInput().split('T')
     open(`/${kind}`)
@@ -45,6 +45,32 @@ describe('data e hora nativas separadas', () => {
     expect(date).toHaveAttribute('type', 'date'); expect(date).toHaveValue(current[0]); expect(date).toBeRequired()
     expect(time).toHaveAttribute('type', 'time'); expect(time).toHaveValue(current[1]); expect(time).toBeRequired()
     expect(document.querySelector('input[type="datetime-local"]')).toBeNull()
+  })
+
+  it('mantém data e hora vazias no cadastro de consulta e exige ambas', async () => {
+    open('/consulta')
+    const date = screen.getByLabelText('Data') as HTMLInputElement
+    const time = screen.getByLabelText('Hora') as HTMLInputElement
+    expect(date).toHaveAttribute('type', 'date'); expect(date).toHaveValue(''); expect(date).toBeRequired()
+    expect(time).toHaveAttribute('type', 'time'); expect(time).toHaveValue(''); expect(time).toBeRequired()
+    expect(document.querySelector('input[type="datetime-local"]')).toBeNull()
+
+    fireEvent.submit(screen.getByRole('button', { name: 'Salvar registro' }).closest('form')!)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Informe a data da consulta.')
+    expect(await db.appointments.count()).toBe(0)
+
+    change('Data', '2026-10-11')
+    fireEvent.submit(screen.getByRole('button', { name: 'Salvar registro' }).closest('form')!)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Informe o horário da consulta.')
+    expect(await db.appointments.count()).toBe(0)
+  })
+
+  it('recupera a data e o horário persistidos ao editar uma consulta', async () => {
+    const record = stamp({ at: iso('2026-10-11T21:45') })
+    await db.appointments.add(record)
+    open(`/consulta/${record.id}/editar`)
+    expect(await screen.findByLabelText('Data')).toHaveValue('2026-10-11')
+    expect(screen.getByLabelText('Hora')).toHaveValue('21:45')
   })
 
   it('edita e limpa data e hora independentemente sem perder o outro valor', () => {
@@ -127,6 +153,7 @@ describe('persistência dos formulários', () => {
     const legacy = stamp({ at: iso('2026-10-20T09:00'), professional: 'Profissional legado' })
     await db.appointments.add(legacy)
     open('/consulta')
+    changeDateTime('2026-10-20T09:00')
     change('Tipo de atendimento', 'other')
     change('Informe o tipo de atendimento', 'Fisioterapeuta')
     change('Nome do profissional (opcional)', 'Ana')
