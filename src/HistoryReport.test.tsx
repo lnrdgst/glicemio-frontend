@@ -14,6 +14,7 @@ const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60000).t
 beforeEach(async () => {
   await Promise.all(db.tables.map(table => table.clear()))
   await db.profiles.put({ id: 'local', name: 'Teste', createdAt: now(), updatedAt: now() })
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
 })
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
@@ -122,4 +123,38 @@ it('abre o Relatório no gráfico a partir da evolução recente da Home', async
   expect(await screen.findByRole('heading', { name: 'Glicemia' })).toBeInTheDocument()
   expect(document.getElementById('grafico-glicemia')).toBeInTheDocument()
   expect((screen.getByLabelText('Período') as HTMLSelectElement).value).toBe('30')
+})
+
+it('reposiciona no topo ao mudar de tela, inclusive quando a URL recebe filtro', async () => {
+  const scrollTo = vi.mocked(window.scrollTo)
+  open('/')
+  await screen.findByRole('heading', { name: /olá, teste/i })
+  await waitFor(() => expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'auto' }))
+
+  scrollTo.mockClear()
+  await userEvent.click(screen.getByRole('link', { name: 'Relatório' }))
+  expect(await screen.findByRole('heading', { name: 'Relatório' })).toBeInTheDocument()
+  await waitFor(() => expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'auto' }))
+
+  scrollTo.mockClear()
+  await userEvent.click(screen.getByRole('link', { name: 'Histórico' }))
+  expect(await screen.findByRole('heading', { name: 'Histórico' })).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Glicemias' }))
+  await waitFor(() => expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'auto' }))
+})
+
+it('leva ao topo ao tocar novamente na guia ativa e respeita destinos com âncora', async () => {
+  const scrollTo = vi.mocked(window.scrollTo)
+  open('/')
+  await screen.findByRole('heading', { name: /olá, teste/i })
+  scrollTo.mockClear()
+  await userEvent.click(screen.getByRole('link', { name: 'Início' }))
+  expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'auto' })
+
+  scrollTo.mockClear()
+  await db.glucose.add(stamp({ value: 115, at: minutesAgo(10) }))
+  const chartLink = await screen.findByRole('link', { name: /gráfico completo de evolução recente/i })
+  await userEvent.click(chartLink)
+  expect(await screen.findByRole('heading', { name: 'Glicemia' })).toBeInTheDocument()
+  expect(scrollTo).not.toHaveBeenCalled()
 })

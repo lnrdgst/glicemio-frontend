@@ -10,7 +10,7 @@ import { ProfileForm } from './ProfileForm'
 import { insulinName } from './shared/records'
 import { classifyGlucose, hypoglycemiaGuidance } from './shared/glucose'
 import { shouldShowBasalReminder } from './shared/basalReminder'
-import { Button, Layout, usePersistence } from './shared/ui'
+import { Button, Layout, scrollToTop, usePersistence } from './shared/ui'
 import { appointmentCountdown, appointmentDateTime, dateTime, dayHeading, duration, eventDateTime, localDayKey, time } from './shared/format'
 
 const symptoms = ['Tremor', 'Suor', 'Fraqueza', 'Tontura', 'Palpitação', 'Confusão', 'Outro']
@@ -200,6 +200,16 @@ function More() {
   return <Layout><h1>Ajustes</h1><div className="more-sections"><section className="card more-card"><div className="home-card-heading"><h2>Perfil</h2></div>{profile && <ProfileForm key={profile.id} profile={profile} />}</section><section className="card more-card"><div className="home-card-heading"><h2>Consultas</h2></div>{appointment ? <><Link className="appointment-summary" to={`/detalhes/appointments/${appointment.id}`}><b>Próxima consulta {appointmentCountdown(appointment.at)}</b><span>{eventDateTime(appointment.at)}</span></Link><Link className="secondary" to="/consulta">Cadastrar nova consulta</Link></> : <><p className="muted">Nenhuma consulta agendada</p><Link className="primary" to="/consulta">Cadastrar consulta</Link></>}</section><section className="card more-card"><div className="home-card-heading"><h2>Dados e backup</h2></div><BackupActions />{!code ? <button className="danger" onClick={beginDelete}>Excluir dados locais</button> : <div className="delete-confirm"><p>Esta ação eliminará os registros locais deste dispositivo. Exporte um JSON antes de continuar.</p><p>Digite o código <b>{code}</b> para confirmar.</p><input className="field" inputMode="numeric" maxLength={6} value={typed} onChange={event => setTyped(event.target.value.replace(/\D/g, ''))} aria-label="Código de confirmação" /><div className="actions"><button className="danger" disabled={typed !== code || deleting} onClick={() => void clear()}>{deleting ? 'Excluindo…' : 'Confirmar exclusão'}</button><button className="secondary" disabled={deleting} onClick={() => setCode(undefined)}>Cancelar</button></div></div>}</section></div></Layout>
 }
 
+function ScrollManager() {
+  const location = useLocation()
+  useEffect(() => {
+    if (location.hash) return
+    const frame = window.requestAnimationFrame(scrollToTop)
+    return () => window.cancelAnimationFrame(frame)
+  }, [location.key, location.pathname, location.search, location.hash])
+  return null
+}
+
 function AppRoutes() { return <Routes><Route path="/onboarding" element={<Onboarding />} /><Route path="/" element={<Home />} /><Route path="/glicemia" element={<RecordForm kind="glicemia" />} /><Route path="/glicemia/:id/editar" element={<RecordForm kind="glicemia" />} /><Route path="/refeicao" element={<RecordForm kind="refeicao" />} /><Route path="/refeicao/:id/editar" element={<RecordForm kind="refeicao" />} /><Route path="/insulina" element={<RecordForm kind="insulina" />} /><Route path="/insulina/:id/editar" element={<RecordForm kind="insulina" />} /><Route path="/treino" element={<RecordForm kind="treino" />} /><Route path="/treino/:id/editar" element={<RecordForm kind="treino" />} /><Route path="/consulta" element={<RecordForm kind="consulta" />} /><Route path="/consulta/:id/editar" element={<RecordForm kind="consulta" />} /><Route path="/episodio" element={<Episode />} /><Route path="/episodio/:id/editar" element={<Episode />} /><Route path="/detalhes/:table/:id" element={<Details />} /><Route path="/historico" element={<History />} /><Route path="/relatorio" element={<Report />} /><Route path="/mais" element={<More />} /><Route path="*" element={<Navigate to="/" />} /></Routes> }
 class StorageBoundary extends React.Component<{ children: ReactNode }, { error: boolean }> { state = { error: false }; static getDerivedStateFromError() { return { error: true } }; componentDidCatch(error: Error) { console.error('Falha ao acessar registros locais', error) }; render() { return this.state.error ? <main className="shell"><section className="card"><h1>Não foi possível abrir os registros</h1><p role="alert">O armazenamento local está indisponível. Nenhum dado foi apagado.</p><Button onClick={() => window.location.reload()}>Tentar novamente</Button></section></main> : this.props.children } }
-export function App() { return <StorageBoundary><AppRoutes /></StorageBoundary> }
+export function App() { return <StorageBoundary><ScrollManager /><AppRoutes /></StorageBoundary> }
