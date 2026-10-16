@@ -63,10 +63,17 @@ select.field { text-overflow: ellipsis; }
 .glucose-summary dt { color:var(--color-muted); font-size:.76rem; }
 .glucose-summary dd { color:#f9f5f1; font-size:1rem; font-weight:700; margin:4px 0 0; overflow-wrap:anywhere; }
 .glucose-chart, .glucose-chart-empty { background:var(--color-panel); border:1px solid #39322e; border-radius:16px; margin-top:12px; padding:8px; }
+.glucose-chart { position:relative; }
 .glucose-chart svg { display:block; height:auto; overflow:visible; width:100%; }
 .glucose-chart-grid { stroke:#39322e; stroke-width:1; }
 .glucose-chart-line { fill:none; stroke:var(--color-copper); stroke-linecap:round; stroke-linejoin:round; stroke-width:2; }
 .glucose-chart-point { stroke:var(--color-panel); stroke-width:2; }
+.glucose-chart-point.selected { stroke:#f9f5f1; stroke-width:2.5; }
+.glucose-chart-hit-area { cursor:pointer; fill:transparent; outline:none; }
+.glucose-chart-hit-area:focus-visible { fill:rgba(249,245,241,.14); stroke:#f9f5f1; stroke-width:1.5; }
+.glucose-chart-tooltip { background:#2a2420; border:1px solid #6e6259; border-radius:10px; box-shadow:0 8px 18px rgba(0,0,0,.32); color:#f9f5f1; display:grid; font-size:.78rem; gap:3px; max-width:min(210px, calc(100% - 16px)); padding:9px 11px; pointer-events:none; position:absolute; transform:translate(-50%, calc(-100% - 10px)); z-index:2; }
+.glucose-chart-tooltip.below { transform:translate(-50%, 10px); }
+.glucose-chart-tooltip strong { font-size:.95rem; }
 .glucose-chart-axis { fill:var(--color-muted); font-size:9px; }
 .glucose-chart-empty { min-height:120px; display:grid; place-items:center; text-align:center; }
 .home-glucose-detail { color:inherit; display:block; text-decoration:none; }

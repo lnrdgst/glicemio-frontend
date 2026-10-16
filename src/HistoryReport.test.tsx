@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import '@testing-library/jest-dom/vitest'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from './App'
@@ -97,8 +97,53 @@ it('mostra resumo compacto e gráfico de linha com pontos classificados', async 
   await screen.findByText('216 mg/dL')
   const chart = await screen.findByRole('img', { name: 'Gráfico de glicemia com 3 medições' })
   expect(chart.querySelector('polyline')).toBeInTheDocument()
-  expect(chart.querySelectorAll('circle')).toHaveLength(3)
-  expect([...chart.querySelectorAll('circle')].map(point => point.getAttribute('fill'))).toEqual(['#CE6872', '#D98A60', '#71AFA5'])
+  expect(chart.querySelectorAll('.glucose-chart-point')).toHaveLength(3)
+  expect([...chart.querySelectorAll('.glucose-chart-point')].map(point => point.getAttribute('fill'))).toEqual(['#CE6872', '#D98A60', '#71AFA5'])
+})
+
+it('exibe detalhes reais ao selecionar pontos do gráfico e permite fechar o tooltip', async () => {
+  const first = stamp({ value: 115, at: minutesAgo(20), context: 'Jejum' })
+  const second = stamp({ value: 345, at: minutesAgo(10), context: 'Após refeição' })
+  const third = stamp({ value: 160, at: minutesAgo(5) })
+  await db.glucose.bulkAdd([first, second, third])
+  open('/relatorio')
+  const highPoint = await screen.findByRole('button', { name: /ver detalhes da medição de 345 mg\/dL/i })
+  await userEvent.click(highPoint)
+  const tooltip = screen.getByRole('tooltip')
+  expect(tooltip).toHaveTextContent('345 mg/dL')
+  expect(tooltip).toHaveTextContent(/\d{2}\/\d{2}\/\d{4} às \d{2}:\d{2}/)
+  expect(tooltip).toHaveTextContent('Após refeição')
+  expect(highPoint).toHaveAttribute('aria-pressed', 'true')
+
+  const firstPoint = screen.getByRole('button', { name: /ver detalhes da medição de 115 mg\/dL/i })
+  await userEvent.click(firstPoint)
+  expect(screen.getByRole('tooltip')).toHaveTextContent('Jejum')
+  expect(screen.getByRole('tooltip')).not.toHaveTextContent('Após refeição')
+  expect(firstPoint).toHaveAttribute('aria-pressed', 'true')
+
+  await userEvent.click(screen.getByRole('button', { name: /ver detalhes da medição de 160 mg\/dL/i }))
+  expect(screen.getByRole('tooltip')).toHaveTextContent('160 mg/dL')
+  expect(screen.getByRole('tooltip').querySelectorAll('span')).toHaveLength(1)
+
+  await userEvent.keyboard('{Escape}')
+  expect(screen.queryByRole('tooltip')).toBeNull()
+  await userEvent.click(firstPoint)
+  fireEvent.pointerDown(document.body)
+  await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull())
+})
+
+it('limpa a seleção quando o filtro remove o ponto selecionado', async () => {
+  await db.glucose.bulkAdd([
+    stamp({ value: 115, at: new Date(Date.now() - 31 * 86400000).toISOString() }),
+    stamp({ value: 160, at: minutesAgo(10) }),
+  ])
+  open('/relatorio?period=90')
+  const oldPoint = await screen.findByRole('button', { name: /ver detalhes da medição de 115 mg\/dL/i })
+  await userEvent.click(oldPoint)
+  expect(screen.getByRole('tooltip')).toHaveTextContent('115 mg/dL')
+  await userEvent.selectOptions(screen.getByLabelText('Período'), '7')
+  await waitFor(() => expect(screen.queryByRole('button', { name: /ver detalhes da medição de 115 mg\/dL/i })).toBeNull())
+  expect(screen.queryByRole('tooltip')).toBeNull()
 })
 
 it('exibe uma legenda compacta que reutiliza as cores dos pontos', async () => {

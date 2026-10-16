@@ -142,7 +142,9 @@ function History() {
   return <Layout><h1>Histórico</h1><div className="history-filters" role="group" aria-label="Filtrar histórico">{historyFilters.map(item => <button key={item.value} type="button" className={filter === item.value ? 'secondary active' : 'secondary'} onClick={() => changeFilter(item.value)}>{item.label}</button>)}</div>{lines.length ? <><div className="timeline">{groups.map(group => <section className="history-day" key={group.key}><h2>{group.title}</h2>{group.lines.map(line => <div className="item" key={`${line.table}-${line.id}`}><Link className="history-link" to={`/detalhes/${line.table}/${line.recordId}`}><b>{time(line.at)} · {line.title}</b>{line.detail && <span className="muted">{line.detail}</span>}</Link></div>)}</section>)}</div>{hasMore && <button className="secondary history-more" type="button" onClick={() => setShown(value => value + 20)}>Carregar registros anteriores</button>}</> : <section className="card"><p>Nenhum registro neste filtro.</p></section>}</Layout>
 }
 
-function GlucoseChart({ points, compact = false }: { points: { id?: string; at: string; value: number }[]; compact?: boolean }) {
+function GlucoseChart({ points, compact = false }: { points: { id?: string; at: string; value: number; context?: string }[]; compact?: boolean }) {
+  const chartRef = React.useRef<HTMLDivElement>(null)
+  const [selectedId, setSelectedId] = useState<string>()
   const ordered = [...points].sort((first, second) => +new Date(first.at) - +new Date(second.at))
   const width = 320; const height = compact ? 120 : 200; const inset = compact ? { top: 10, right: 10, bottom: 18, left: 10 } : { top: 12, right: 12, bottom: 42, left: 42 }
   const plotWidth = width - inset.left - inset.right; const plotHeight = height - inset.top - inset.bottom
@@ -152,8 +154,24 @@ function GlucoseChart({ points, compact = false }: { points: { id?: string; at: 
   const y = (value: number) => inset.top + (maximum - value) * plotHeight / (maximum - minimum)
   const path = ordered.map((point, index) => `${x(index)},${y(point.value)}`).join(' ')
   const formatDateTime = (value: string) => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
+  const tooltipDateTime = (value: string) => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value)).replace(', ', ' às ')
+  const pointId = (point: { id?: string; at: string; value: number }) => point.id ?? `${point.at}-${point.value}`
+  const selected = ordered.find(point => pointId(point) === selectedId)
+  const selectedIndex = selected ? ordered.indexOf(selected) : -1
+  const selectionKeys = ordered.map(pointId).join('|')
+  useEffect(() => { if (selectedId && !ordered.some(point => pointId(point) === selectedId)) setSelectedId(undefined) }, [selectedId, selectionKeys])
+  useEffect(() => {
+    const closeWhenOutside = (event: PointerEvent) => { if (!chartRef.current?.contains(event.target as Node)) setSelectedId(undefined) }
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setSelectedId(undefined) }
+    document.addEventListener('pointerdown', closeWhenOutside)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => { document.removeEventListener('pointerdown', closeWhenOutside); document.removeEventListener('keydown', closeOnEscape) }
+  }, [])
   const ticks = [maximum, (maximum + minimum) / 2, minimum]
-  return <div className={compact ? 'glucose-chart compact' : 'glucose-chart'}><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Gráfico de glicemia com ${ordered.length} ${ordered.length === 1 ? 'medição' : 'medições'}`}><title>Gráfico de glicemia</title>{!compact && ticks.map(value => <g key={value}><line className="glucose-chart-grid" x1={inset.left} x2={width - inset.right} y1={y(value)} y2={y(value)} /><text className="glucose-chart-axis" x={inset.left - 6} y={y(value) + 4} textAnchor="end">{Math.round(value)}</text></g>)}<polyline className="glucose-chart-line" points={path} />{ordered.map((point, index) => <circle className="glucose-chart-point" key={point.id ?? `${point.at}-${point.value}`} cx={x(index)} cy={y(point.value)} r="4" fill={classifyGlucose(point.value).color}><title>{`${point.value} mg/dL · ${formatDateTime(point.at)}`}</title></circle>)}</svg></div>
+  const selectedX = selected ? x(selectedIndex) / width * 100 : 0
+  const selectedY = selected ? y(selected.value) / height * 100 : 0
+  const tooltipStyle = { left: `${Math.min(64, Math.max(36, selectedX))}%`, top: `${selectedY}%` }
+  return <div ref={chartRef} className={compact ? 'glucose-chart compact' : 'glucose-chart'}><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Gráfico de glicemia com ${ordered.length} ${ordered.length === 1 ? 'medição' : 'medições'}`} onClick={() => setSelectedId(undefined)}><title>Gráfico de glicemia</title>{!compact && ticks.map(value => <g key={value}><line className="glucose-chart-grid" x1={inset.left} x2={width - inset.right} y1={y(value)} y2={y(value)} /><text className="glucose-chart-axis" x={inset.left - 6} y={y(value) + 4} textAnchor="end">{Math.round(value)}</text></g>)}<polyline className="glucose-chart-line" points={path} />{ordered.map((point, index) => { const id = pointId(point); const isSelected = id === selectedId; const label = `Ver detalhes da medição de ${point.value} mg/dL em ${tooltipDateTime(point.at)}`; return <g key={id}><circle className={isSelected ? 'glucose-chart-point selected' : 'glucose-chart-point'} cx={x(index)} cy={y(point.value)} r={isSelected ? 6 : 4} fill={classifyGlucose(point.value).color}><title>{`${point.value} mg/dL · ${formatDateTime(point.at)}`}</title></circle><circle className="glucose-chart-hit-area" cx={x(index)} cy={y(point.value)} r="14" role="button" tabIndex={0} aria-label={label} aria-pressed={isSelected} aria-describedby={isSelected ? 'glucose-chart-tooltip' : undefined} onClick={event => { event.stopPropagation(); setSelectedId(id) }} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedId(id) } }} /></g> })}</svg>{selected && <div id="glucose-chart-tooltip" role="tooltip" className={selectedY < 35 ? 'glucose-chart-tooltip below' : 'glucose-chart-tooltip'} style={tooltipStyle}><strong>{selected.value} mg/dL</strong><span>{tooltipDateTime(selected.at)}</span>{selected.context && selected.context !== 'Não informado' && <span>{selected.context}</span>}</div>}</div>
 }
 
 function Report() {
