@@ -15,6 +15,7 @@ describe('onboarding', () => {
   it('mostra o onboarding no primeiro acesso sem perfil', async () => {
     renderApp()
     expect(await screen.findByText('Vamos começar pelo essencial.')).toBeTruthy()
+    expect(screen.getByText('Separe por vírgula ou por linha. Você poderá editar em Ajustes > Perfil.')).toBeTruthy()
   })
 
   it('salva um cadastro válido e apresenta a Home', async () => {

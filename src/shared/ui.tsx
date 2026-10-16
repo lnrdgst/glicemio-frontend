@@ -4,7 +4,7 @@ import { Activity, CalendarDays, ChartNoAxesCombined, MoreHorizontal, type Lucid
 
 export const Button = ({ children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) => <button className="primary" {...props}>{children}</button>
 export function Layout({ children, onBeforeNavigate }: { children: ReactNode; onBeforeNavigate?: () => boolean }) {
-  const links: [string, LucideIcon, string][] = [['/', Activity, 'Início'], ['/historico', CalendarDays, 'Histórico'], ['/relatorio', ChartNoAxesCombined, 'Relatório'], ['/mais', MoreHorizontal, 'Mais']]
+  const links: [string, LucideIcon, string][] = [['/', Activity, 'Início'], ['/historico', CalendarDays, 'Histórico'], ['/relatorio', ChartNoAxesCombined, 'Relatório'], ['/mais', MoreHorizontal, 'Ajustes']]
   return <div className="shell">{children}<nav className="nav" aria-label="Navegação principal">{links.map(([to, Icon, label]) => <NavLink key={to} to={to} end={to === '/'} onClick={event => { if (onBeforeNavigate && !onBeforeNavigate()) event.preventDefault() }}><Icon size={20} /><span>{label}</span></NavLink>)}</nav></div>
 }
 export function usePersistence() {

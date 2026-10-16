@@ -77,6 +77,7 @@ select.field { text-overflow: ellipsis; }
 .more-sections { display: grid; gap: 16px; }
 .more-card { display: grid; gap: 16px; }
 .more-card > h2 { margin: 0; }
+.more-card > .home-card-heading { margin-bottom: 0; }
 .more-card .actions { margin: 0; }
 .backup-actions { display:grid; gap:12px; }
 .backup-file { display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
@@ -93,7 +94,11 @@ select.field { text-overflow: ellipsis; }
 .item:has(a[href*="/episodes/"]):before { background:#A65B67; }
 .item:has(a[href*="/appointments/"]):before { background:#F5F0EA; }
 .profile-form fieldset { display: grid; gap: 14px; }
+.profile-subsection { display:grid; gap:12px; }
+.profile-subsection + .profile-subsection { border-top:1px solid #39322e; padding-top:16px; }
+.profile-subsection h3 { color:var(--color-muted); font-size:.9rem; margin:0; }
 .profile-form .label, .profile-form .muted { margin: 0; }
+.profile-subsection .check { margin:0; }
 .profile-form textarea.field { min-height: 112px; line-height: 1.4; resize: vertical; }
 .suggestions ul { list-style: none; padding: 0; margin: 4px 0; border: 1px solid #574c46; border-radius: 12px; max-height: 180px; overflow-y: auto; }
 .suggestions li { cursor: pointer; padding: 10px 12px; }
