@@ -34,6 +34,15 @@ it('edita perfil, diagnóstico e modalidades opcionais preservando a criação',
   expect(await db.profiles.get('local')).toMatchObject({ name: 'Novo nome', diagnosis: 'Diabetes tipo 2', workoutActivities: ['Musculação', 'Natação'], createdAt: previous?.createdAt })
 })
 
+it('mantém Ajustes restrito a Perfil e Dados e backup', async () => {
+  await db.appointments.add(stamp({ at: new Date(Date.now() + 86400000).toISOString(), attendanceType: 'endocrinologist' }))
+  open('/mais')
+  expect(await screen.findByRole('heading', { name: 'Perfil' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Dados e backup' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Consultas' })).toBeNull()
+  expect(screen.queryByRole('link', { name: /Cadastrar consulta/i })).toBeNull()
+})
+
 it.each(['yes', 'no', 'later'] as const)('persiste o uso basal opcional como %s sem ativar lembrete fora da configuração diária', async basalUsage => {
   open('/mais'); await screen.findByLabelText('Nome')
   fireEvent.change(screen.getByLabelText('Uso habitual de insulina basal'), { target: { value: basalUsage } })
