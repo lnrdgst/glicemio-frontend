@@ -105,7 +105,7 @@ it('mostra uma única consulta futura ou o estado vazio sem incluir consultas pa
   const future = stamp({ at: new Date(Date.now() + 86400000).toISOString(), attendanceType: 'ophthalmologist' as const })
   await db.appointments.bulkAdd([past, future])
   const view = open('/')
-  await screen.findByText('Oftalmologista')
+  await screen.findAllByText('Oftalmologista')
   expect(document.querySelectorAll('.home-appointment')).toHaveLength(1)
   expect(screen.queryByText('Clínico geral')).toBeNull()
   view.unmount(); await db.appointments.delete(future.id)
@@ -120,7 +120,30 @@ it('identifica uma consulta futura no dia atual como Hoje', async () => {
   await db.appointments.add(stamp({ at: new Date(2026, 3, 10, 16, 0).toISOString(), attendanceType: 'general' as const }))
   open('/')
   await screen.findByText('Próximas consultas')
-  expect(await screen.findByText(/^Hoje, 10\/04\/2026 às 16:00$/)).toBeInTheDocument()
+  expect((await screen.findAllByText(/^Hoje, 10\/04\/2026 às 16:00$/))).toHaveLength(2)
+})
+
+it('destaca somente a consulta mais próxima dentro das próximas 24 horas', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 3, 10, 15, 15))
+  const first = stamp({ at: new Date(2026, 3, 10, 17, 0).toISOString(), attendanceType: 'endocrinologist' as const, professional: 'Dra. Ana' })
+  const second = stamp({ at: new Date(2026, 3, 10, 18, 0).toISOString(), attendanceType: 'nutritionist' as const })
+  await db.appointments.bulkAdd([second, first]); await db.glucose.add(stamp({ value: 115, at: new Date(2026, 3, 10, 15, 0).toISOString() }))
+  open('/')
+  const title = await screen.findByText('Consulta em breve')
+  const highlight = title.closest('.imminent-appointment')!
+  expect(highlight).toHaveTextContent('Endocrinologista')
+  expect(highlight).toHaveTextContent('Hoje, 10/04/2026 às 17:00')
+  expect(highlight).toHaveTextContent('em 1h45min')
+  expect(highlight).toHaveAttribute('href', `/detalhes/appointments/${first.id}`)
+  expect(highlight.compareDocumentPosition(screen.getByText('Última medição').closest('section')!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+})
+
+it('não destaca consultas sem proximidade ou quando não há consultas futuras', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 3, 10, 15, 15))
+  await db.appointments.add(stamp({ at: new Date(2026, 3, 11, 16, 0).toISOString(), attendanceType: 'general' as const }))
+  open('/')
+  await screen.findByText('Próximas consultas')
+  expect(document.querySelector('.imminent-appointment')).toBeNull()
 })
 
 it('remove automaticamente da Home a consulta que acabou de passar', async () => {

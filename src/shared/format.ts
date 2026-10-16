@@ -37,8 +37,8 @@ export const appointmentCountdown = (value: string, reference = new Date()) => {
  if (remaining <= 0) return undefined
  const minute = 60000; const hour = 60 * minute; const day = 24 * hour
  if (remaining >= day) { const days = Math.floor(remaining / day); return `em ${days} ${days === 1 ? 'dia' : 'dias'}` }
- if (remaining >= hour) { const hours = Math.floor(remaining / hour); return `em ${hours} ${hours === 1 ? 'hora' : 'horas'}` }
- if (remaining >= minute) { const minutes = Math.floor(remaining / minute); return `em ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}` }
+ if (remaining >= hour) { const hours = Math.floor(remaining / hour); const minutes = Math.floor((remaining % hour) / minute); return `em ${hours}h${minutes ? `${minutes}min` : ''}` }
+ if (remaining >= minute) return `em ${Math.floor(remaining / minute)}min`
  return 'em menos de 1 minuto'
 }
 

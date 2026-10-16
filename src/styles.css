@@ -99,6 +99,11 @@ select.field { text-overflow: ellipsis; }
 .backup-preview p { margin:0 0 8px; }
 .backup-preview ul { margin:0; padding-left:20px; }
 .basal-reminder { border-color:#A99BCB; margin:16px 0; }
+.imminent-appointment { border-color:#D5B45F; color:inherit; display:grid; gap:6px; margin:16px 0; text-decoration:none; }
+.imminent-appointment-title { align-items:center; color:#D5B45F; display:flex; font-size:.9rem; font-weight:600; gap:6px; }
+.imminent-appointment-details { align-items:center; display:flex; flex-wrap:wrap; font-size:.9rem; gap:8px 12px; justify-content:space-between; }
+.imminent-appointment-details strong { color:#f9f5f1; white-space:nowrap; }
+.imminent-appointment:focus-visible { outline:2px solid #D5B45F; outline-offset:3px; }
 .appointment-summary { color:inherit; display:grid; gap:4px; text-decoration:none; }
 .delete-confirm { border:1px solid #574c46; border-radius:12px; padding:12px; }
 .item:has(a[href*="/meals/"]):before { background:#C989A2; }

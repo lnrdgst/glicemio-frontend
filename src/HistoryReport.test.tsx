@@ -35,8 +35,10 @@ it('usa calendário local e tempo restante real nas próximas consultas', () => 
   expect(appointmentDateTime(new Date(2027, 0, 1, 10, 30).toISOString(), reference)).toBe('Amanhã, 01/01/2027 às 10:30')
   expect(appointmentDateTime(new Date(2027, 0, 6, 10, 30).toISOString(), reference)).toBe('Quarta-feira, 06/01/2027 às 10:30')
   expect(appointmentCountdown(new Date(2027, 0, 2, 20, 0).toISOString(), reference)).toBe('em 2 dias')
-  expect(appointmentCountdown(new Date(2027, 0, 1, 10, 30).toISOString(), reference)).toBe('em 14 horas')
-  expect(appointmentCountdown(new Date(2026, 11, 31, 20, 45).toISOString(), reference)).toBe('em 45 minutos')
+  expect(appointmentCountdown(new Date(2027, 0, 1, 10, 30).toISOString(), reference)).toBe('em 14h30min')
+  expect(appointmentCountdown(new Date(2026, 11, 31, 22, 0).toISOString(), reference)).toBe('em 2h')
+  expect(appointmentCountdown(new Date(2026, 11, 31, 21, 45).toISOString(), reference)).toBe('em 1h45min')
+  expect(appointmentCountdown(new Date(2026, 11, 31, 20, 45).toISOString(), reference)).toBe('em 45min')
   expect(appointmentCountdown(new Date(2026, 11, 31, 20, 0, 30).toISOString(), reference)).toBe('em menos de 1 minuto')
 })
 
