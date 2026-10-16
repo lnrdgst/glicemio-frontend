@@ -42,5 +42,8 @@ it('mantém o vínculo com a refeição sem exibir a informação redundante na 
   expect(await screen.findByText('Após refeição', { exact: false })).toBeInTheDocument()
   expect(screen.queryByText('Associada a uma refeição')).toBeNull()
   expect((await db.glucose.get(glucose.id))?.mealId).toBe(meal.id)
-  expect(screen.getAllByRole('link', { name: /Ver histórico/ }).find(link => link.getAttribute('href') === '/historico?tipo=glucose')).toBeTruthy()
+  const history = screen.getAllByRole('link', { name: /Ver histórico/ }).find(link => link.getAttribute('href') === '/historico?tipo=glucose')!
+  expect(history.closest('.home-history')).toBeTruthy()
+  expect(history.closest('.glucose-card')).toBeNull()
+  expect(history.closest('.home-section')!.querySelector('.glucose-card')).toBeTruthy()
 })
