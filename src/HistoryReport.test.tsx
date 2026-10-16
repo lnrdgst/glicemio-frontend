@@ -81,3 +81,27 @@ it('mostra resumo compacto e gráfico de linha com pontos classificados', async 
   expect(chart.querySelectorAll('circle')).toHaveLength(3)
   expect([...chart.querySelectorAll('circle')].map(point => point.getAttribute('fill'))).toEqual(['#CE6872', '#D98A60', '#71AFA5'])
 })
+
+it('exibe uma legenda compacta que reutiliza as cores dos pontos', async () => {
+  await db.glucose.add(stamp({ value: 115, at: minutesAgo(10) }))
+  open('/relatorio')
+  expect(await screen.findByLabelText('Legenda de classificação da glicemia')).toBeInTheDocument()
+  expect(screen.getByText('Menor que 54 mg/dL: Hipoglicemia nível 2')).toBeInTheDocument()
+  expect(screen.getByText('80–130 mg/dL: Dentro da faixa definida')).toBeInTheDocument()
+  expect(screen.getByText(/valor de cada ponto, não a linha/i)).toBeInTheDocument()
+  expect(screen.getByText(/não substituem metas individualizadas/i)).toBeInTheDocument()
+  const swatches = document.querySelectorAll<HTMLElement>('.glucose-legend-swatch')
+  expect(swatches).toHaveLength(7)
+  expect(swatches[3].style.backgroundColor).toBe('rgb(113, 175, 165)')
+})
+
+it('abre o Relatório no gráfico a partir da evolução recente da Home', async () => {
+  await db.glucose.add(stamp({ value: 115, at: minutesAgo(10) }))
+  open('/')
+  const chartLink = await screen.findByRole('link', { name: /gráfico completo de evolução recente/i })
+  expect(chartLink).toHaveAttribute('href', '/relatorio?period=30#grafico-glicemia')
+  await userEvent.click(chartLink)
+  expect(await screen.findByRole('heading', { name: 'Glicemia' })).toBeInTheDocument()
+  expect(document.getElementById('grafico-glicemia')).toBeInTheDocument()
+  expect((screen.getByLabelText('Período') as HTMLSelectElement).value).toBe('30')
+})

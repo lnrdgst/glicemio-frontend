@@ -34,3 +34,13 @@ it('atualiza o cartão da Home após novo registro e edição sem alterar o regi
   expect(screen.queryByText(/plano individual de tratamento da hipoglicemia/i)).toBeNull()
   expect(await db.glucose.get(record.id)).toMatchObject({ id: record.id, createdAt: record.createdAt, value: 115, context: 'Jejum' })
 })
+
+it('mantém o vínculo com a refeição sem exibir a informação redundante na Home', async () => {
+  const meal = stamp({ kind: 'Almoço', at: now() }); await db.meals.add(meal)
+  const glucose = stamp({ value: 115, at: now(), context: 'Após refeição', mealId: meal.id }); await db.glucose.add(glucose)
+  render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
+  expect(await screen.findByText('Após refeição', { exact: false })).toBeInTheDocument()
+  expect(screen.queryByText('Associada a uma refeição')).toBeNull()
+  expect((await db.glucose.get(glucose.id))?.mealId).toBe(meal.id)
+  expect(screen.getAllByRole('link', { name: /Ver histórico/ }).find(link => link.getAttribute('href') === '/historico?tipo=glucose')).toBeTruthy()
+})
