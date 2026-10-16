@@ -82,6 +82,20 @@ describe('onboarding', () => {
     expect((await screen.findAllByText('Nenhuma aplicação registrada.')).length).toBe(1)
   })
 
+  it('prioriza o lembrete basal ativo antes da última medição e não deixa espaço quando inativo', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 9, 15, 22, 0))
+    await db.profiles.put({ id: 'local', name: 'Hugo', basalReminderEnabled: true, basalReminderTime: '21:00', createdAt: now(), updatedAt: now() })
+    renderApp()
+    const reminder = await screen.findByText('Insulina basal — lembrete')
+    const glucose = await screen.findByRole('heading', { name: 'Nenhuma medição ainda' })
+    expect(reminder.closest('.basal-reminder')!.compareDocumentPosition(glucose.closest('section')!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    cleanup()
+    await db.profiles.update('local', { basalReminderEnabled: false })
+    renderApp()
+    expect(await screen.findByRole('heading', { name: 'Nenhuma medição ainda' })).toBeTruthy()
+    expect(screen.queryByText('Insulina basal — lembrete')).toBeNull()
+  })
+
   it('mantém os últimos registros basal e rápida independentes', async () => {
     await db.profiles.put({ id: 'local', name: 'Iara', createdAt: now(), updatedAt: now() })
     await db.insulin.bulkAdd([stamp({ kind: 'Basal/lenta', dose: 18, at: '2026-01-01T22:00:00.000Z' }), stamp({ kind: 'Rápida', dose: 3, at: '2026-01-01T12:00:00.000Z' })])
