@@ -148,6 +148,51 @@ describe('data e hora nativas separadas', () => {
   })
 })
 
+describe('campos numéricos', () => {
+  it('solicita teclado numérico e rejeita glicemia não inteira, inclusive colada', async () => {
+    open('/glicemia')
+    const input = screen.getByLabelText('Valor (mg/dL)') as HTMLInputElement
+    expect(input).toHaveAttribute('type', 'text')
+    expect(input).toHaveAttribute('inputmode', 'numeric')
+    expect(input).toHaveAttribute('pattern', '[0-9]*')
+    expect(input).toHaveAttribute('enterkeyhint', 'next')
+
+    for (const invalid of ['', '71+2', '71.5', 'setenta']) {
+      change('Valor (mg/dL)', invalid)
+      expect(invalid ? input.validity.patternMismatch : input.validity.valueMissing).toBe(true)
+      fireEvent.submit(screen.getByRole('button', { name: 'Salvar registro' }).closest('form')!)
+      expect(await screen.findByRole('alert')).toHaveTextContent('glicemia inteira maior que zero')
+    }
+    expect(await db.glucose.count()).toBe(0)
+
+    change('Valor (mg/dL)', '71')
+    await save()
+    expect(await screen.findByRole('status')).toHaveTextContent('Registro salvo')
+    expect((await db.glucose.toArray())[0]?.value).toBe(71)
+  })
+
+  it('aceita dose decimal com vírgula, sem arredondar, e rejeita formato inválido', async () => {
+    open('/insulina')
+    const input = screen.getByLabelText('Dose (UI)') as HTMLInputElement
+    expect(input).toHaveAttribute('type', 'text')
+    expect(input).toHaveAttribute('inputmode', 'decimal')
+    expect(input).toHaveAttribute('pattern', '[0-9]+([,.][0-9]+)?')
+    expect(input).toHaveAttribute('enterkeyhint', 'next')
+
+    change('Dose (UI)', '4+5')
+    expect(input.validity.patternMismatch).toBe(true)
+    fireEvent.submit(screen.getByRole('button', { name: 'Salvar registro' }).closest('form')!)
+    expect(await screen.findByRole('alert')).toHaveTextContent('dose válida maior que zero')
+    expect(await db.insulin.count()).toBe(0)
+
+    change('Dose (UI)', '4,25')
+    await userEvent.click(screen.getByLabelText(/Confirmo que esta dose/))
+    await save()
+    expect(await screen.findByRole('status')).toHaveTextContent('Registro salvo')
+    expect((await db.insulin.toArray())[0]?.dose).toBe(4.25)
+  })
+})
+
 describe('persistência dos formulários', () => {
   it('salva tipo de atendimento e texto de outro sem invalidar consultas legadas', async () => {
     const legacy = stamp({ at: iso('2026-10-20T09:00'), professional: 'Profissional legado' })
@@ -298,7 +343,7 @@ describe('insulina', () => {
     open('/insulina'); const newDate = (screen.getByLabelText('Data') as HTMLInputElement).value; const newTime = (screen.getByLabelText('Hora') as HTMLInputElement).value
     change('Insulina utilizada (opcional)', 'lispro')
     await userEvent.click(await screen.findByRole('button', { name: 'Reaproveitar dose histórica' }))
-    expect(screen.getByLabelText('Dose (UI)')).toHaveValue(4)
+    expect(screen.getByLabelText('Dose (UI)')).toHaveValue('4')
     expect(screen.getByLabelText(/Confirmo que esta dose/)).not.toBeChecked()
     expect(screen.getByLabelText('Data')).toHaveValue(newDate); expect(screen.getByLabelText('Hora')).toHaveValue(newTime)
     fireEvent.submit(screen.getByRole('button', { name: 'Salvar registro' }).closest('form')!)
@@ -312,7 +357,7 @@ describe('insulina', () => {
     await applied('lispro', 4, '2026-10-13T12:00'); open('/insulina'); change('Insulina utilizada (opcional)', 'lispro')
     await userEvent.click(await screen.findByRole('button', { name: 'Reaproveitar dose histórica' }))
     await userEvent.click(screen.getByLabelText(/Confirmo que esta dose/)); change('Insulina utilizada (opcional)', 'aspart')
-    expect(screen.getByLabelText('Dose (UI)')).toHaveValue(null); expect(screen.getByLabelText(/Confirmo que esta dose/)).not.toBeChecked()
+    expect(screen.getByLabelText('Dose (UI)')).toHaveValue(''); expect(screen.getByLabelText(/Confirmo que esta dose/)).not.toBeChecked()
     expect(screen.queryByRole('button', { name: 'Reaproveitar dose histórica' })).toBeNull()
   })
   it('permite associação opcional da rápida e remove a pendente ao mudar para basal', async () => {
