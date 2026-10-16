@@ -28,8 +28,13 @@ select.field { text-overflow: ellipsis; }
 .glucose-status { color:var(--glucose-status-color); font-size:.9rem; font-weight:700; margin:0 0 6px; }
 .glucose-guidance { border-left:2px solid var(--glucose-status-color); color:var(--color-muted); font-size:.85rem; line-height:1.4; margin:12px 0 0; padding-left:10px; }
 .home-record:focus-visible, .home-list-item:focus-visible, .insulin-line:focus-visible, .history-link:focus-visible { outline:2px solid var(--color-copper); outline-offset:3px; }
-.insulin-summary { margin:16px 0; }
-.insulin-summary h2 { font-size:1.1rem; margin:0 0 4px; }
+.home-section { margin-top:22px; }
+.home-history { display:flex; justify-content:flex-end; min-height:24px; margin-bottom:6px; }
+.home-history > a, .insulin-history-links a { color:var(--color-copper); font-size:.9rem; text-decoration:none; }
+.insulin-history-links { display:flex; gap:10px; }
+.home-card-heading { border-bottom:1px solid #39322e; margin-bottom:10px; padding:0 0 10px; text-align:center; }
+.home-card-heading h2 { font-size:1.1rem; margin:0; }
+.insulin-summary, .home-list-card { padding-top:14px; }
 .insulin-line { display:flex; align-items:center; justify-content:space-between; gap:12px; color:inherit; text-decoration:none; padding:10px 0; }
 .insulin-line p { margin:4px 0 0; }
 .insulin-line strong { white-space:nowrap; }
@@ -58,9 +63,6 @@ select.field { text-overflow: ellipsis; }
 .home-glucose-detail { color:inherit; display:block; text-decoration:none; }
 .home-chart-title { color:var(--color-muted); font-size:.82rem; font-weight:700; margin:12px 0 -4px; }
 .glucose-chart.compact { border:0; margin-top:8px; padding:0; }
-.insulin-summary .row { align-items:center; }
-.insulin-summary .row > a, .insulin-history-links a { color:var(--color-copper); font-size:.9rem; text-decoration:none; }
-.insulin-history-links { display:flex; gap:10px; }
 .report-section .card h3 { margin:8px 0 0; font-size:1.15rem; }
 .report-label { display:flex; align-items:center; gap:6px; color:var(--color-muted); font-size:.82rem; }
 .row { flex-wrap: wrap; }

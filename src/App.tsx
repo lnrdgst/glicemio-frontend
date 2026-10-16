@@ -70,13 +70,13 @@ function BasalReminder({ profile, insulin, now: current }: { profile: any; insul
 function InsulinSummary() {
   const applications = useLiveQuery(() => db.insulin.orderBy('at').reverse().toArray(), []) ?? []
   const basal = applications.find(x => x.kind === 'Basal/lenta'); const rapid = applications.find(x => x.kind === 'Rápida')
-  if (!basal && !rapid) return <section className="card insulin-summary"><h2>Últimas aplicações de insulina</h2><p className="muted">Nenhuma aplicação registrada.</p></section>
   const line = (label: string, application: typeof basal, divider = false) => application && <Link className="insulin-line" style={{ borderTop: divider ? '1px solid #39322e' : undefined }} to={`/detalhes/insulin/${application.id}`}><div><b>{label}</b>{insulinName(application) && <p>{insulinName(application)}</p>}<p className="muted">{eventDateTime(application.at)}</p></div><strong>{application.dose.toLocaleString('pt-BR')} UI</strong></Link>
-  return <section className="card insulin-summary"><div className="row"><h2>Últimas aplicações de insulina</h2>{basal && rapid ? <span className="insulin-history-links"><Link to="/historico?tipo=insulin&subtipo=basal">Basal</Link><Link to="/historico?tipo=insulin&subtipo=rapida">Rápida</Link></span> : <Link to={basal ? '/historico?tipo=insulin&subtipo=basal' : '/historico?tipo=insulin&subtipo=rapida'}>Ver histórico</Link>}</div>{line('Basal / lenta', basal)}{line('Rápida', rapid, Boolean(basal))}</section>
+  const history = basal && rapid ? <span className="insulin-history-links"><Link to="/historico?tipo=insulin&subtipo=basal">Basal</Link><Link to="/historico?tipo=insulin&subtipo=rapida">Rápida</Link></span> : <Link to={basal ? '/historico?tipo=insulin&subtipo=basal' : rapid ? '/historico?tipo=insulin&subtipo=rapida' : '/historico?tipo=insulin'}>Ver histórico</Link>
+  return <section className="home-section"><div className="home-history">{history}</div><div className="card insulin-summary"><div className="home-card-heading"><h2>Últimas aplicações de insulina</h2></div>{!basal && !rapid ? <p className="muted">Nenhuma aplicação registrada.</p> : <>{line('Basal / lenta', basal)}{line('Rápida', rapid, Boolean(basal))}</>}</div></section>
 }
 
 function HomeList({ title, empty, items, render, table, filter }: { title: string; empty: string; items: any[]; render: (item: any) => React.ReactNode; table: string; filter: string }) {
-  return <section style={{ marginTop: 22 }}><div className="row"><h2 style={{ fontSize: '1.1rem' }}>{title}</h2><Link to={`/historico?tipo=${filter}`} style={{ color: '#d7865b' }}>Ver histórico</Link></div><div className="card">{items.length ? items.map(item => <Link className="home-list-item row" key={item.id} to={`/detalhes/${table}/${item.id}`}>{render(item)}</Link>) : <p className="muted">{empty}</p>}</div></section>
+  return <section className="home-section"><div className="home-history"><Link to={`/historico?tipo=${filter}`}>Ver histórico</Link></div><div className="card home-list-card"><div className="home-card-heading"><h2>{title}</h2></div>{items.length ? items.map(item => <Link className="home-list-item row" key={item.id} to={`/detalhes/${table}/${item.id}`}>{render(item)}</Link>) : <p className="muted">{empty}</p>}</div></section>
 }
 
 function Episode() {
