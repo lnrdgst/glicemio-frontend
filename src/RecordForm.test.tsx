@@ -57,6 +57,24 @@ describe('data e hora nativas separadas', () => {
     change('Hora', '00:15'); expect(screen.getByLabelText('Data')).toHaveValue('2026-10-12')
   })
 
+  it('atualiza a sugestão de refeição pela hora e preserva uma escolha manual', async () => {
+    open('/refeicao')
+    change('Hora', '10:00'); expect(screen.getByLabelText('Tipo de refeição')).toHaveValue('Almoço')
+    change('Hora', '16:30'); expect(screen.getByLabelText('Tipo de refeição')).toHaveValue('Lanche')
+    change('Tipo de refeição', 'Outro'); change('Hora', '19:00')
+    expect(screen.getByLabelText('Tipo de refeição')).toHaveValue('Outro')
+    await save(); await screen.findByRole('status')
+    expect((await db.meals.toArray())[0]).toMatchObject({ kind: 'Outro' })
+  })
+
+  it('preserva o tipo de uma refeição existente ao editar', async () => {
+    const record = await mealAt('2026-10-11T16:30', 'Outro')
+    open(`/refeicao/${record.id}/editar`)
+    expect(await screen.findByLabelText('Tipo de refeição')).toHaveValue('Outro')
+    change('Hora', '19:00')
+    expect(screen.getByLabelText('Tipo de refeição')).toHaveValue('Outro')
+  })
+
   it.each([['refeicao', 'meals'], ['glicemia', 'glucose'], ['insulina', 'insulin'], ['consulta', 'appointments']])('persiste o horário efetivo retroativo de %s sem deslocar o horário local', async (kind, table) => {
     open(`/${kind}`); await fill(kind)
     change('Data', '2026-10-11'); change('Hora', '21:45'); await save(); await screen.findByRole('status')

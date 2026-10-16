@@ -12,6 +12,14 @@ export function activitySuggestions(values: string[]) {
   return Array.from(unique.values())
 }
 export const parseActivities = (value: string) => activitySuggestions(value.split(/[\n,;]/))
+export function suggestedMealKind(localDateTime: string) {
+  const hour = Number(localDateTime.slice(11, 13))
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) return undefined
+  if (hour < 10) return 'Café da manhã'
+  if (hour < 15) return 'Almoço'
+  if (hour < 18) return 'Lanche'
+  return 'Jantar'
+}
 export function recentMeal(meals: Meal[], at: string) {
   const measured = new Date(at).getTime()
   return meals.filter(meal => { const elapsed = measured - new Date(meal.at).getTime(); return elapsed >= 0 && elapsed <= 3 * 60 * 60 * 1000 })
