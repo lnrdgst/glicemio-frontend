@@ -241,6 +241,23 @@ describe('insulina', () => {
     change('Tipo', 'Basal/lenta'); change('Insulina utilizada (opcional)', 'nph'); expect(screen.getByText('Classe: Humana de ação intermediária')).toBeInTheDocument()
     expect(screen.queryByRole('option', { name: /Lispro/ })).toBeNull()
   })
+  it('pré-seleciona preferências habituais por categoria sem alterar o perfil após uma escolha manual', async () => {
+    await db.profiles.update('local', { basalUsage: 'yes', basalMedicationId: 'glargine-u100-basaglar', rapidUsage: 'yes', rapidMedicationId: 'aspart-novorapid' })
+    open('/insulina')
+    await waitFor(() => expect(screen.getByLabelText('Insulina utilizada (opcional)')).toHaveValue('aspart-novorapid'))
+    expect(screen.getByText('Pré-selecionada conforme sua preferência habitual.')).toBeInTheDocument()
+    change('Tipo', 'Basal/lenta')
+    await waitFor(() => expect(screen.getByLabelText('Insulina utilizada (opcional)')).toHaveValue('glargine-u100-basaglar'))
+    change('Insulina utilizada (opcional)', 'nph')
+    await fill('insulina'); await save(); await screen.findByRole('status')
+    expect(await db.profiles.get('local')).toMatchObject({ basalMedicationId: 'glargine-u100-basaglar', rapidMedicationId: 'aspart-novorapid' })
+  })
+  it('usa o último medicamento da mesma categoria quando não há preferência configurada', async () => {
+    await applied('lispro', 4, '2026-10-13T12:00')
+    open('/insulina')
+    await waitFor(() => expect(screen.getByLabelText('Insulina utilizada (opcional)')).toHaveValue('lispro'))
+    expect(screen.getByText('Pré-selecionada conforme a última aplicação registrada desta categoria.')).toBeInTheDocument()
+  })
   it('preserva nome livre e identidade estável de Outra', async () => {
     open('/insulina'); change('Insulina utilizada (opcional)', 'other'); change('Nome da insulina', '  Marca   Pessoal  ')
     await fill('insulina'); await save(); await screen.findByRole('status')

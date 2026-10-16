@@ -4,12 +4,14 @@ import { stamp } from '../database/db'
 import { duration, iso, localInput } from './format'
 
 describe('regras locais', () => {
-  it('mantém as dez identidades estáveis do catálogo, sem misturas', () => {
-    expect(insulinCatalog).toHaveLength(10)
-    expect(new Set(insulinCatalog.map(x => x.id)).size).toBe(10)
-    expect(insulinCatalog.filter(x => x.kind === 'Basal/lenta')).toHaveLength(5)
+  it('mantém identidades estáveis do catálogo, sem misturas', () => {
+    expect(insulinCatalog).toHaveLength(20)
+    expect(new Set(insulinCatalog.map(x => x.id)).size).toBe(20)
+    expect(insulinCatalog.filter(x => x.kind === 'Basal/lenta')).toHaveLength(11)
     expect(insulinCatalog.find(x => x.id === 'nph')?.pharmacologicalClass).toContain('intermediária')
     expect(insulinCatalog.find(x => x.id === 'regular')?.pharmacologicalClass).toContain('curta')
+    expect(insulinCatalog.find(x => x.id === 'glargine-u100-basaglar')).toMatchObject({ name: 'Basaglar', brands: 'Glargina U100' })
+    expect(insulinCatalog.find(x => x.id === 'lispro-humalog')).toMatchObject({ name: 'Humalog', brands: 'Lispro' })
   })
   it('deduplica modalidades sem acentos, caixa ou espaços, preservando apresentação', () => {
     expect(activitySuggestions([' Musculação ', 'musculacao', 'MUSCULAÇÃO', '  Caminhada   leve ', ''])).toEqual(['Musculação', 'Caminhada leve'])

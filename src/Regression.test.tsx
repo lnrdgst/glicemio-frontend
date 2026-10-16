@@ -34,6 +34,28 @@ it('edita perfil, diagnóstico e modalidades opcionais preservando a criação',
   expect(await db.profiles.get('local')).toMatchObject({ name: 'Novo nome', diagnosis: 'Diabetes tipo 2', workoutActivities: ['Musculação', 'Natação'], createdAt: previous?.createdAt })
 })
 
+it.each(['yes', 'no', 'later'] as const)('persiste o uso basal opcional como %s sem ativar lembrete fora da configuração diária', async basalUsage => {
+  open('/mais'); await screen.findByLabelText('Nome')
+  fireEvent.change(screen.getByLabelText('Uso habitual de insulina basal'), { target: { value: basalUsage } })
+  if (basalUsage === 'yes') { fireEvent.change(screen.getByLabelText('Insulina basal habitual (opcional)'), { target: { value: 'glargine-u100-basaglar' } }); await userEvent.click(screen.getByLabelText('Ativar lembrete de registro')) }
+  await userEvent.click(screen.getByRole('button', { name: 'Salvar perfil' }))
+  expect(await db.profiles.get('local')).toMatchObject({ basalUsage, basalMedicationId: basalUsage === 'yes' ? 'glargine-u100-basaglar' : undefined, basalReminderEnabled: basalUsage === 'yes' })
+})
+
+it('mantém a preferência rápida independente e preserva aplicações históricas após alterar preferências', async () => {
+  const historical = stamp({ kind: 'Rápida' as const, dose: 4, at: now(), medicationId: 'lispro', medicationName: 'Lispro', medicationKey: 'lispro' }); await db.insulin.add(historical)
+  open('/mais'); await screen.findByLabelText('Nome')
+  fireEvent.change(screen.getByLabelText('Uso habitual de insulina rápida/prandial'), { target: { value: 'yes' } })
+  fireEvent.change(screen.getByLabelText('Insulina rápida/prandial habitual (opcional)'), { target: { value: 'lispro-humalog' } })
+  await userEvent.click(screen.getByRole('button', { name: 'Salvar perfil' })); await screen.findByRole('status')
+  expect(await db.profiles.get('local')).toMatchObject({ rapidUsage: 'yes', rapidMedicationId: 'lispro-humalog' })
+  cleanup(); open('/mais'); await screen.findByLabelText('Nome')
+  fireEvent.change(screen.getByLabelText('Uso habitual de insulina basal'), { target: { value: 'no' } }); fireEvent.change(screen.getByLabelText('Uso habitual de insulina rápida/prandial'), { target: { value: 'later' } })
+  await userEvent.click(screen.getByRole('button', { name: 'Salvar perfil' })); await screen.findByRole('status')
+  expect(await db.insulin.get(historical.id)).toEqual(historical)
+  expect(await db.profiles.get('local')).toMatchObject({ basalUsage: 'no', rapidUsage: 'later', basalReminderEnabled: false })
+})
+
 it('registra, edita e encerra um episódio sem perder vínculos de glicemia', async () => {
   open('/episodio'); await userEvent.click(screen.getByLabelText('Tremor')); await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))
   await screen.findByRole('heading', { name: 'Acompanhando sintomas' })

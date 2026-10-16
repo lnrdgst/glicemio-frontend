@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 export type ID = string
-export type Profile = { id: ID; name: string; diagnosis?: string; workoutActivities?: string[]; basalUsage?: 'yes'|'no'|'later'; basalFrequency?: 'daily'|'other'; basalReminderEnabled?: boolean; basalReminderTime?: string; createdAt: string; updatedAt: string }
+export type Profile = { id: ID; name: string; diagnosis?: string; workoutActivities?: string[]; basalUsage?: 'yes'|'no'|'later'; basalFrequency?: 'daily'|'other'; basalReminderEnabled?: boolean; basalReminderTime?: string; basalMedicationId?: string; basalMedicationName?: string; rapidUsage?: 'yes'|'no'|'later'; rapidMedicationId?: string; rapidMedicationName?: string; createdAt: string; updatedAt: string }
 type Base = { id: ID; createdAt: string; updatedAt: string }
 export type Meal = Base & { kind: string; at: string; description?: string }
 export type Glucose = Base & { value: number; at: string; context?: string; note?: string; mealId?: ID; episodeId?: ID }

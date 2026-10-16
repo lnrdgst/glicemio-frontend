@@ -37,6 +37,16 @@ export const insulinCatalog: readonly Medication[] = [
   { id: 'aspart', name: 'Asparte', brands: 'NovoRapid', kind: 'Rápida', pharmacologicalClass: 'Análogo de ação rápida' },
   { id: 'glulisine', name: 'Glulisina', brands: 'Apidra', kind: 'Rápida', pharmacologicalClass: 'Análogo de ação rápida' },
   { id: 'faster-aspart', name: 'Asparte ultrarrápida', brands: 'Fiasp', kind: 'Rápida', pharmacologicalClass: 'Análogo de ação ultrarrápida' },
+  { id: 'nph-humulin-n', name: 'Humulin N', brands: 'NPH', kind: 'Basal/lenta', pharmacologicalClass: 'Humana de ação intermediária' },
+  { id: 'nph-novolin-n', name: 'Novolin N', brands: 'NPH', kind: 'Basal/lenta', pharmacologicalClass: 'Humana de ação intermediária' },
+  { id: 'glargine-u100-lantus', name: 'Lantus', brands: 'Glargina U100', kind: 'Basal/lenta', pharmacologicalClass: 'Análogo de ação longa' },
+  { id: 'glargine-u100-basaglar', name: 'Basaglar', brands: 'Glargina U100', kind: 'Basal/lenta', pharmacologicalClass: 'Análogo de ação longa' },
+  { id: 'glargine-u300-toujeo', name: 'Toujeo', brands: 'Glargina U300', kind: 'Basal/lenta', pharmacologicalClass: 'Análogo de ação prolongada' },
+  { id: 'degludec-tresiba', name: 'Tresiba', brands: 'Degludeca', kind: 'Basal/lenta', pharmacologicalClass: 'Análogo de ação ultralonga' },
+  { id: 'lispro-humalog', name: 'Humalog', brands: 'Lispro', kind: 'Rápida', pharmacologicalClass: 'Análogo de ação rápida' },
+  { id: 'aspart-novorapid', name: 'NovoRapid', brands: 'Asparte', kind: 'Rápida', pharmacologicalClass: 'Análogo de ação rápida' },
+  { id: 'glulisine-apidra', name: 'Apidra', brands: 'Glulisina', kind: 'Rápida', pharmacologicalClass: 'Análogo de ação rápida' },
+  { id: 'faster-aspart-fiasp', name: 'Fiasp', brands: 'Asparte ultrarrápida', kind: 'Rápida', pharmacologicalClass: 'Análogo de ação rápida' },
 ]
 export const medicationIdentity = (id: string, name: string) => !id ? undefined : id === 'other' ? (cleanName(name) ? `other:${normalizedName(name)}` : undefined) : id
 export const insulinName = (record: Insulin) => record.medicationName || insulinCatalog.find(x => x.id === record.medicationId)?.name
