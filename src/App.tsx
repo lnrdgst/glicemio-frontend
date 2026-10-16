@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Droplets, Dumbbell, Soup, Syringe, TriangleAlert } from 'lucide-react'
-import { db, now, stamp, type Meal } from './database/db'
+import { db, now, stamp, type Appointment, type Meal } from './database/db'
 import { exportBackup, previewBackup, restoreBackup, type ImportPreview, type ProfileStrategy } from './database/backup'
 import { RecordForm, type RecordKind } from './RecordForm'
 import { ProfileForm } from './ProfileForm'
@@ -40,7 +40,7 @@ function Home() {
   const recentGlucose = useLiveQuery(() => db.glucose.filter(item => new Date(item.at).getTime() >= Date.now() - 7 * 86400000).toArray(), []) ?? []
   const meals = useLiveQuery(() => db.meals.orderBy('at').reverse().limit(3).toArray(), []) ?? []
   const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().limit(3).toArray(), []) ?? []
-  const appointment = useLiveQuery(() => db.appointments.filter(x => new Date(x.at) > new Date()).sortBy('at'), [])?.[0]
+  const appointments = useLiveQuery(() => db.appointments.filter(x => new Date(x.at) > new Date()).sortBy('at'), []) ?? []
   const insulin = useLiveQuery(() => db.insulin.orderBy('at').reverse().toArray(), []) ?? []
   const [clock, setClock] = useState(() => new Date())
   const reportPeriod = (() => { try { const value = Number(sessionStorage.getItem('glicoponto-report-period')); return [7, 30, 90].includes(value) ? value : 30 } catch { return 30 } })()
@@ -52,7 +52,7 @@ function Home() {
     <BasalReminder profile={profile} insulin={insulin} now={clock} />
     {glucose && glucoseState ? <section className="home-record card glucose-card" style={{ '--glucose-status-color': glucoseState.color } as React.CSSProperties}><div className="row"><span className="muted">Última medição</span><Link to="/historico?tipo=glucose">Ver histórico</Link></div><Link className="home-glucose-detail" to={`/detalhes/glucose/${glucose.id}`}><h2 style={{ fontSize: '2.3rem', margin: '6px 0' }}>{glucose.value} <small>mg/dL</small></h2><p className="glucose-status">{glucoseState.label}</p><p className="muted">{glucose.context || 'Sem contexto'} · registrada {eventDateTime(glucose.at)}</p></Link>{recentGlucose.length > 0 && <Link className="home-chart-link" to={`/relatorio?period=${reportPeriod}#grafico-glicemia`} aria-label="Ver gráfico completo de evolução recente no Relatório"><p className="home-chart-title">Evolução recente <span aria-hidden="true">↗</span></p><GlucoseChart points={recentGlucose} compact /></Link>}{glucoseGuidance && <p className="glucose-guidance">{glucoseGuidance}</p>}</section> : <section className="card" style={{ margin: '22px 0' }}><h2>Nenhuma medição ainda</h2><p className="muted">Registre seu primeiro Ponto para acompanhar seu contexto.</p></section>}
     <div className="quick"><Link to="/glicemia" className="quick-glucose"><Droplets size={22} /><br />Registrar glicemia</Link><Link to="/refeicao" className="quick-meal"><Soup size={22} /><br />Registrar refeição</Link><Link to="/insulina" className="quick-insulin"><Syringe size={22} /><br />Registrar insulina</Link><Link to="/treino" className="quick-workout"><Dumbbell size={22} /><br />Registrar treino</Link><Link to="/episodio" className="symptoms quick-symptoms"><TriangleAlert size={22} /><br />Estou com sintomas</Link></div>
-    {appointment && <Link className="card home-record" to={`/detalhes/appointments/${appointment.id}`}><b>Próxima consulta</b><p>{eventDateTime(appointment.at)}</p><p className="muted">{appointmentSummary(appointment)} · em {Math.ceil((new Date(appointment.at).getTime() - Date.now()) / 86400000)} dias</p></Link>}
+    <HomeAppointments appointments={appointments.slice(0, 2)} />
     <InsulinSummary />
     <HomeList title="Últimas refeições" empty="Nenhuma refeição registrada." items={meals} render={(record: Meal) => <><span>{record.kind}</span><span className="muted">{eventDateTime(record.at)}</span></>} table="meals" filter="meals" />
     <HomeList title="Últimos treinos" empty="Nenhum treino registrado." items={workouts} render={record => <><span>{record.activity}</span><span className="muted">{duration(record.startedAt, record.endedAt)}</span></>} table="workouts" filter="workouts" />
@@ -78,6 +78,15 @@ function InsulinSummary() {
 
 function HomeList({ title, empty, items, render, table, filter }: { title: string; empty: string; items: any[]; render: (item: any) => React.ReactNode; table: string; filter: string }) {
   return <section className="home-section"><div className="home-history"><Link to={`/historico?tipo=${filter}`}>Ver histórico</Link></div><div className="card home-list-card"><div className="home-card-heading"><h2>{title}</h2></div>{items.length ? items.map(item => <Link className="home-list-item row" key={item.id} to={`/detalhes/${table}/${item.id}`}>{render(item)}</Link>) : <p className="muted">{empty}</p>}</div></section>
+}
+
+function appointmentCountdown(value: string) {
+  const today = new Date(); const target = new Date(value); const start = new Date(today.getFullYear(), today.getMonth(), today.getDate()); const targetStart = new Date(target.getFullYear(), target.getMonth(), target.getDate()); const days = Math.round((targetStart.getTime() - start.getTime()) / 86400000)
+  return days <= 0 ? 'Hoje' : `em ${days} ${days === 1 ? 'dia' : 'dias'}`
+}
+
+function HomeAppointments({ appointments }: { appointments: Appointment[] }) {
+  return <section className="home-section"><div className="home-history"><Link to="/historico?tipo=appointments">Ver histórico</Link></div><div className="card home-list-card"><div className="home-card-heading"><h2>Próximas consultas</h2></div>{appointments.length ? appointments.map(appointment => <Link className="home-appointment" key={appointment.id} to={`/detalhes/appointments/${appointment.id}`}><div><b>{attendanceLabel(appointment) || 'Consulta'}</b>{appointment.professional && <p>{appointment.professional}</p>}<p className="muted">{eventDateTime(appointment.at)}</p></div><span className="muted">{appointmentCountdown(appointment.at)}</span></Link>) : <><p className="muted">Nenhuma consulta futura agendada.</p><Link className="secondary home-appointment-action" to="/consulta">Cadastrar consulta</Link></>}</div></section>
 }
 
 function Episode() {

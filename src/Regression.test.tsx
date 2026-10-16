@@ -14,7 +14,7 @@ beforeEach(async () => {
   await db.profiles.put({ id: 'local', name: 'Perfil de teste', createdAt: now(), updatedAt: now() })
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 it('edita perfil, diagnóstico e modalidades opcionais preservando a criação', async () => {
   const previous = await db.profiles.get('local')
@@ -71,14 +71,54 @@ it('registra, edita e encerra um episódio sem perder vínculos de glicemia', as
   expect((await db.episodes.get(episode.id))?.endedAt).toBeTruthy()
 })
 
-it('salva consulta e a apresenta como próxima na Home', async () => {
+it('salva consulta e a apresenta entre as próximas na Home', async () => {
   open('/consulta'); const future = new Date(); future.setDate(future.getDate() + 7); future.setMinutes(future.getMinutes() - future.getTimezoneOffset())
   const [date, time] = future.toISOString().slice(0, 16).split('T')
   fireEvent.change(screen.getByLabelText('Data'), { target: { value: date } })
   fireEvent.change(screen.getByLabelText('Hora'), { target: { value: time } })
   fireEvent.change(screen.getByLabelText('Nome do profissional (opcional)'), { target: { value: 'Profissional de teste' } })
-  await userEvent.click(screen.getByRole('button', { name: 'Salvar registro' })); expect(await screen.findByText('Próxima consulta')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Salvar registro' })); expect(await screen.findByText('Próximas consultas')).toBeInTheDocument()
   expect(await db.appointments.count()).toBe(1)
+})
+
+it('exibe somente as duas consultas futuras mais próximas, em ordem cronológica', async () => {
+  const reference = Date.now()
+  const first = stamp({ at: new Date(reference + 86400000).toISOString(), attendanceType: 'endocrinologist' as const, professional: 'Dra. Ana' })
+  const second = stamp({ at: new Date(reference + 2 * 86400000).toISOString(), attendanceType: 'nutritionist' as const, professional: 'Profissional com nome longo para celular' })
+  const third = stamp({ at: new Date(reference + 3 * 86400000).toISOString(), attendanceType: 'general' as const })
+  await db.appointments.bulkAdd([third, second, first])
+  open('/')
+  await screen.findByText('Próximas consultas')
+  await waitFor(() => expect(document.querySelectorAll('.home-appointment')).toHaveLength(2))
+  const appointments = document.querySelectorAll<HTMLAnchorElement>('.home-appointment')
+  expect(appointments).toHaveLength(2)
+  expect(appointments[0]).toHaveTextContent('Endocrinologista')
+  expect(appointments[0]).toHaveTextContent('Dra. Ana')
+  expect(appointments[0]).toHaveAttribute('href', `/detalhes/appointments/${first.id}`)
+  expect(appointments[1]).toHaveTextContent('Nutricionista')
+  expect(appointments[1]).toHaveTextContent('Profissional com nome longo para celular')
+  expect(screen.getAllByRole('link', { name: 'Ver histórico' }).find(link => link.getAttribute('href') === '/historico?tipo=appointments')).toBeTruthy()
+})
+
+it('mostra uma única consulta futura ou o estado vazio sem incluir consultas passadas', async () => {
+  const past = stamp({ at: new Date(Date.now() - 86400000).toISOString(), attendanceType: 'general' as const })
+  const future = stamp({ at: new Date(Date.now() + 86400000).toISOString(), attendanceType: 'ophthalmologist' as const })
+  await db.appointments.bulkAdd([past, future])
+  const view = open('/')
+  await screen.findByText('Oftalmologista')
+  expect(document.querySelectorAll('.home-appointment')).toHaveLength(1)
+  expect(screen.queryByText('Clínico geral')).toBeNull()
+  view.unmount(); await db.appointments.delete(future.id)
+  open('/')
+  expect(await screen.findByText('Nenhuma consulta futura agendada.')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Cadastrar consulta' })).toHaveAttribute('href', '/consulta')
+})
+
+it('identifica uma consulta futura no dia atual como Hoje', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 3, 10, 9, 0))
+  await db.appointments.add(stamp({ at: new Date(2026, 3, 10, 16, 0).toISOString(), attendanceType: 'general' as const }))
+  open('/')
+  expect(await screen.findByText('Hoje', { exact: true })).toBeInTheDocument()
 })
 
 it('mantém estatísticas determinísticas e histórico em ordem efetiva', async () => {
