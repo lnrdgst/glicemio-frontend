@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from './App'
 import { db, now, stamp } from './database/db'
-import { eventDateTime } from './shared/format'
+import { eventDateTime, weekdayEventDateTime } from './shared/format'
 
 const open = (route: string) => render(<MemoryRouter initialEntries={[route]}><App /></MemoryRouter>)
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60000).toISOString()
@@ -22,6 +22,11 @@ it('formata Hoje, Ontem e datas anteriores pelo calendário local', () => {
   expect(eventDateTime(new Date(2026, 9, 15, 0, 1).toISOString(), reference)).toBe('Hoje, às 00:01')
   expect(eventDateTime(new Date(2026, 9, 14, 23, 59).toISOString(), reference)).toBe('Ontem, às 23:59')
   expect(eventDateTime(new Date(2026, 9, 13, 23, 59).toISOString(), reference)).toBe('13/10/2026 às 23:59')
+})
+
+it('formata o dia da semana, data e hora local das próximas consultas', () => {
+  expect(weekdayEventDateTime(new Date(2027, 0, 13, 13, 50).toISOString())).toBe('Quarta-feira, 13/01/2027 às 13:50')
+  expect(weekdayEventDateTime(new Date(2027, 0, 1, 10, 30).toISOString())).toBe('Sexta-feira, 01/01/2027 às 10:30')
 })
 
 it('separa a timeline em Hoje, Ontem e data completa', async () => {

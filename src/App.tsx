@@ -11,7 +11,7 @@ import { insulinName } from './shared/records'
 import { classifyGlucose, hypoglycemiaGuidance } from './shared/glucose'
 import { shouldShowBasalReminder } from './shared/basalReminder'
 import { Button, Layout, usePersistence } from './shared/ui'
-import { dateTime, dayHeading, duration, eventDateTime, localDayKey, time } from './shared/format'
+import { dateTime, dayHeading, duration, eventDateTime, localDayKey, time, weekdayEventDateTime } from './shared/format'
 
 const symptoms = ['Tremor', 'Suor', 'Fraqueza', 'Tontura', 'Palpitação', 'Confusão', 'Outro']
 const detailsFor: Record<string, { title: string; edit: string }> = {
@@ -86,7 +86,7 @@ function appointmentCountdown(value: string) {
 }
 
 function HomeAppointments({ appointments }: { appointments: Appointment[] }) {
-  return <section className="home-section"><div className="home-history"><Link to="/historico?tipo=appointments">Ver histórico</Link></div><div className="card home-list-card"><div className="home-card-heading"><h2>Próximas consultas</h2></div>{appointments.length ? appointments.map(appointment => <Link className="home-appointment" key={appointment.id} to={`/detalhes/appointments/${appointment.id}`}><div><b>{attendanceLabel(appointment) || 'Consulta'}</b>{appointment.professional && <p>{appointment.professional}</p>}<p className="muted">{eventDateTime(appointment.at)}</p></div><span className="muted">{appointmentCountdown(appointment.at)}</span></Link>) : <><p className="muted">Nenhuma consulta futura agendada.</p><Link className="secondary home-appointment-action" to="/consulta">Cadastrar consulta</Link></>}</div></section>
+  return <section className="home-section"><div className="home-history"><Link to="/historico?tipo=appointments">Ver histórico</Link></div><div className="card home-list-card"><div className="home-card-heading"><h2>Próximas consultas</h2></div>{appointments.length ? appointments.map(appointment => <Link className="home-appointment" key={appointment.id} to={`/detalhes/appointments/${appointment.id}`}><div><b>{attendanceLabel(appointment) || 'Consulta'}</b>{appointment.professional && <p>{appointment.professional}</p>}<p className="muted">{weekdayEventDateTime(appointment.at)}</p></div><span className="muted">{appointmentCountdown(appointment.at)}</span></Link>) : <><p className="muted">Nenhuma consulta futura agendada.</p><Link className="secondary home-appointment-action" to="/consulta">Cadastrar consulta</Link></>}</div></section>
 }
 
 function Episode() {

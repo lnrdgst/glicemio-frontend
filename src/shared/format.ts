@@ -20,6 +20,11 @@ export const eventDateTime = (value: string, reference = new Date()) => {
  return `${dateOnly(date)} às ${at}`
 }
 
+export const weekdayEventDateTime = (value: string) => {
+ const date = new Date(value); const weekday = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(date)
+ return `${weekday.charAt(0).toLocaleUpperCase('pt-BR')}${weekday.slice(1)}, ${dateOnly(date)} às ${time(value)}`
+}
+
 export const dayHeading = (value: string, reference = new Date()) => {
  const date = new Date(value); const distance = dayDistance(date, reference); const short = dateOnly(date).slice(0, 5)
  if (distance === 0) return `Hoje · ${short}`
