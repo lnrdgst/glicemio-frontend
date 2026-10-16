@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from './App'
 import { db, now, stamp } from './database/db'
-import { eventDateTime, weekdayEventDateTime } from './shared/format'
+import { appointmentCountdown, appointmentDateTime, eventDateTime, weekdayEventDateTime } from './shared/format'
 
 const open = (route: string) => render(<MemoryRouter initialEntries={[route]}><App /></MemoryRouter>)
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60000).toISOString()
@@ -27,6 +27,17 @@ it('formata Hoje, Ontem e datas anteriores pelo calendário local', () => {
 it('formata o dia da semana, data e hora local das próximas consultas', () => {
   expect(weekdayEventDateTime(new Date(2027, 0, 13, 13, 50).toISOString())).toBe('Quarta-feira, 13/01/2027 às 13:50')
   expect(weekdayEventDateTime(new Date(2027, 0, 1, 10, 30).toISOString())).toBe('Sexta-feira, 01/01/2027 às 10:30')
+})
+
+it('usa calendário local e tempo restante real nas próximas consultas', () => {
+  const reference = new Date(2026, 11, 31, 20, 0)
+  expect(appointmentDateTime(new Date(2026, 11, 31, 22, 30).toISOString(), reference)).toBe('Hoje, 31/12/2026 às 22:30')
+  expect(appointmentDateTime(new Date(2027, 0, 1, 10, 30).toISOString(), reference)).toBe('Amanhã, 01/01/2027 às 10:30')
+  expect(appointmentDateTime(new Date(2027, 0, 6, 10, 30).toISOString(), reference)).toBe('Quarta-feira, 06/01/2027 às 10:30')
+  expect(appointmentCountdown(new Date(2027, 0, 2, 20, 0).toISOString(), reference)).toBe('em 2 dias')
+  expect(appointmentCountdown(new Date(2027, 0, 1, 10, 30).toISOString(), reference)).toBe('em 14 horas')
+  expect(appointmentCountdown(new Date(2026, 11, 31, 20, 45).toISOString(), reference)).toBe('em 45 minutos')
+  expect(appointmentCountdown(new Date(2026, 11, 31, 20, 0, 30).toISOString(), reference)).toBe('em menos de 1 minuto')
 })
 
 it('separa a timeline em Hoje, Ontem e data completa', async () => {

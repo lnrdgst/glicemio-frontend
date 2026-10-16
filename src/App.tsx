@@ -11,7 +11,7 @@ import { insulinName } from './shared/records'
 import { classifyGlucose, hypoglycemiaGuidance } from './shared/glucose'
 import { shouldShowBasalReminder } from './shared/basalReminder'
 import { Button, Layout, usePersistence } from './shared/ui'
-import { dateTime, dayHeading, duration, eventDateTime, localDayKey, time, weekdayEventDateTime } from './shared/format'
+import { appointmentCountdown, appointmentDateTime, dateTime, dayHeading, duration, eventDateTime, localDayKey, time } from './shared/format'
 
 const symptoms = ['Tremor', 'Suor', 'Fraqueza', 'Tontura', 'Palpitação', 'Confusão', 'Outro']
 const detailsFor: Record<string, { title: string; edit: string }> = {
@@ -40,19 +40,19 @@ function Home() {
   const recentGlucose = useLiveQuery(() => db.glucose.filter(item => new Date(item.at).getTime() >= Date.now() - 7 * 86400000).toArray(), []) ?? []
   const meals = useLiveQuery(() => db.meals.orderBy('at').reverse().limit(3).toArray(), []) ?? []
   const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().limit(3).toArray(), []) ?? []
-  const appointments = useLiveQuery(() => db.appointments.filter(x => new Date(x.at) > new Date()).sortBy('at'), []) ?? []
+  const appointments = useLiveQuery(() => db.appointments.orderBy('at').toArray(), []) ?? []
   const insulin = useLiveQuery(() => db.insulin.orderBy('at').reverse().toArray(), []) ?? []
   const [clock, setClock] = useState(() => new Date())
   const reportPeriod = (() => { try { const value = Number(sessionStorage.getItem('glicoponto-report-period')); return [7, 30, 90].includes(value) ? value : 30 } catch { return 30 } })()
-  useEffect(() => { const update = () => setClock(new Date()); const timer = window.setInterval(update, 60000); document.addEventListener('visibilitychange', update); return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', update) } }, [])
-  const glucoseState = glucose ? classifyGlucose(glucose.value) : undefined; const glucoseGuidance = glucoseState ? hypoglycemiaGuidance(glucoseState) : undefined
+  useEffect(() => { const update = () => setClock(new Date()); const timer = window.setInterval(update, 30000); document.addEventListener('visibilitychange', update); return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', update) } }, [])
+  const glucoseState = glucose ? classifyGlucose(glucose.value) : undefined; const glucoseGuidance = glucoseState ? hypoglycemiaGuidance(glucoseState) : undefined; const upcomingAppointments = appointments.filter(appointment => new Date(appointment.at) > clock).slice(0, 2)
   if (profile === undefined) return <main className="shell" />
   if (!profile) return <Navigate to="/onboarding" replace />
   return <Layout>{location.state?.success && <p role="status">{location.state.success}</p>}<header><span style={{ color: '#d7865b', fontWeight: 800, letterSpacing: 2 }}>GLICOPONTO</span><h1 style={{ marginBottom: 4 }}>Olá, {profile.name}</h1>{profile.diagnosis && <p className="muted">{profile.diagnosis}</p>}</header>
     <BasalReminder profile={profile} insulin={insulin} now={clock} />
     {glucose && glucoseState ? <section className="home-record card glucose-card" style={{ '--glucose-status-color': glucoseState.color } as React.CSSProperties}><div className="row"><span className="muted">Última medição</span><Link to="/historico?tipo=glucose">Ver histórico</Link></div><Link className="home-glucose-detail" to={`/detalhes/glucose/${glucose.id}`}><h2 style={{ fontSize: '2.3rem', margin: '6px 0' }}>{glucose.value} <small>mg/dL</small></h2><p className="glucose-status">{glucoseState.label}</p><p className="muted">{glucose.context || 'Sem contexto'} · registrada {eventDateTime(glucose.at)}</p></Link>{recentGlucose.length > 0 && <Link className="home-chart-link" to={`/relatorio?period=${reportPeriod}#grafico-glicemia`} aria-label="Ver gráfico completo de evolução recente no Relatório"><p className="home-chart-title">Evolução recente <span aria-hidden="true">↗</span></p><GlucoseChart points={recentGlucose} compact /></Link>}{glucoseGuidance && <p className="glucose-guidance">{glucoseGuidance}</p>}</section> : <section className="card" style={{ margin: '22px 0' }}><h2>Nenhuma medição ainda</h2><p className="muted">Registre seu primeiro Ponto para acompanhar seu contexto.</p></section>}
     <div className="quick"><Link to="/glicemia" className="quick-glucose"><Droplets size={22} /><br />Registrar glicemia</Link><Link to="/refeicao" className="quick-meal"><Soup size={22} /><br />Registrar refeição</Link><Link to="/insulina" className="quick-insulin"><Syringe size={22} /><br />Registrar insulina</Link><Link to="/treino" className="quick-workout"><Dumbbell size={22} /><br />Registrar treino</Link><Link to="/episodio" className="symptoms quick-symptoms"><TriangleAlert size={22} /><br />Estou com sintomas</Link></div>
-    <HomeAppointments appointments={appointments.slice(0, 2)} />
+    {upcomingAppointments.length > 0 && <HomeAppointments appointments={upcomingAppointments} reference={clock} />}
     <InsulinSummary />
     <HomeList title="Últimas refeições" empty="Nenhuma refeição registrada." items={meals} render={(record: Meal) => <><span>{record.kind}</span><span className="muted">{eventDateTime(record.at)}</span></>} table="meals" filter="meals" />
     <HomeList title="Últimos treinos" empty="Nenhum treino registrado." items={workouts} render={record => <><span>{record.activity}</span><span className="muted">{duration(record.startedAt, record.endedAt)}</span></>} table="workouts" filter="workouts" />
@@ -80,13 +80,8 @@ function HomeList({ title, empty, items, render, table, filter }: { title: strin
   return <section className="home-section"><div className="home-history"><Link to={`/historico?tipo=${filter}`}>Ver histórico</Link></div><div className="card home-list-card"><div className="home-card-heading"><h2>{title}</h2></div>{items.length ? items.map(item => <Link className="home-list-item row" key={item.id} to={`/detalhes/${table}/${item.id}`}>{render(item)}</Link>) : <p className="muted">{empty}</p>}</div></section>
 }
 
-function appointmentCountdown(value: string) {
-  const today = new Date(); const target = new Date(value); const start = new Date(today.getFullYear(), today.getMonth(), today.getDate()); const targetStart = new Date(target.getFullYear(), target.getMonth(), target.getDate()); const days = Math.round((targetStart.getTime() - start.getTime()) / 86400000)
-  return days <= 0 ? 'Hoje' : `em ${days} ${days === 1 ? 'dia' : 'dias'}`
-}
-
-function HomeAppointments({ appointments }: { appointments: Appointment[] }) {
-  return <section className="home-section"><div className="home-history"><Link to="/historico?tipo=appointments">Ver histórico</Link></div><div className="card home-list-card"><div className="home-card-heading"><h2>Próximas consultas</h2></div>{appointments.length ? appointments.map(appointment => <Link className="home-appointment" key={appointment.id} to={`/detalhes/appointments/${appointment.id}`}><div><b>{attendanceLabel(appointment) || 'Consulta'}</b>{appointment.professional && <p>{appointment.professional}</p>}<p className="muted">{weekdayEventDateTime(appointment.at)}</p></div><span className="muted">{appointmentCountdown(appointment.at)}</span></Link>) : <><p className="muted">Nenhuma consulta futura agendada.</p><Link className="secondary home-appointment-action" to="/consulta">Cadastrar consulta</Link></>}</div></section>
+function HomeAppointments({ appointments, reference }: { appointments: Appointment[]; reference: Date }) {
+  return <section className="home-section"><div className="home-history"><Link to="/historico?tipo=appointments">Ver histórico</Link></div><div className="card home-list-card"><div className="home-card-heading"><h2>Próximas consultas</h2></div>{appointments.map(appointment => <Link className="home-appointment" key={appointment.id} to={`/detalhes/appointments/${appointment.id}`}><div><b>{attendanceLabel(appointment) || 'Consulta'}</b>{appointment.professional && <p>{appointment.professional}</p>}<p className="muted">{appointmentDateTime(appointment.at, reference)}</p></div><span className="muted">{appointmentCountdown(appointment.at, reference)}</span></Link>)}</div></section>
 }
 
 function Episode() {

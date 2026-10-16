@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import '@testing-library/jest-dom/vitest'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from './App'
@@ -110,15 +110,28 @@ it('mostra uma única consulta futura ou o estado vazio sem incluir consultas pa
   expect(screen.queryByText('Clínico geral')).toBeNull()
   view.unmount(); await db.appointments.delete(future.id)
   open('/')
-  expect(await screen.findByText('Nenhuma consulta futura agendada.')).toBeInTheDocument()
-  expect(screen.getByRole('link', { name: 'Cadastrar consulta' })).toHaveAttribute('href', '/consulta')
+  await screen.findByRole('heading', { name: 'Olá, Perfil de teste' })
+  expect(screen.queryByRole('heading', { name: 'Próximas consultas' })).toBeNull()
+  expect(screen.getAllByRole('link', { name: 'Ver histórico' }).find(link => link.getAttribute('href') === '/historico?tipo=appointments')).toBeUndefined()
 })
 
 it('identifica uma consulta futura no dia atual como Hoje', async () => {
   vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 3, 10, 9, 0))
   await db.appointments.add(stamp({ at: new Date(2026, 3, 10, 16, 0).toISOString(), attendanceType: 'general' as const }))
   open('/')
-  expect(await screen.findByText('Hoje', { exact: true })).toBeInTheDocument()
+  await screen.findByText('Próximas consultas')
+  expect(await screen.findByText(/^Hoje, 10\/04\/2026 às 16:00$/)).toBeInTheDocument()
+})
+
+it('remove automaticamente da Home a consulta que acabou de passar', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 3, 10, 9, 0))
+  await db.appointments.add(stamp({ at: new Date(2026, 3, 10, 9, 0, 30).toISOString(), attendanceType: 'general' as const }))
+  open('/')
+  await screen.findByText('Próximas consultas')
+  vi.setSystemTime(new Date(2026, 3, 10, 9, 1))
+  await act(async () => { document.dispatchEvent(new Event('visibilitychange')) })
+  expect(screen.queryByRole('heading', { name: 'Próximas consultas' })).toBeNull()
+  expect(await db.appointments.count()).toBe(1)
 })
 
 it('mantém estatísticas determinísticas e histórico em ordem efetiva', async () => {
