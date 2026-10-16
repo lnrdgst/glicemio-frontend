@@ -83,8 +83,8 @@ select.field { text-overflow: ellipsis; }
 .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
 .more-sections { display: grid; gap: 16px; }
 .more-card { display: grid; gap: 16px; }
-.more-card > h2 { margin: 0; }
 .more-card > .home-card-heading { margin-bottom: 0; }
+.more-card > .home-card-heading h2 { color:#D98A60; font-weight:500; }
 .more-card .actions { margin: 0; }
 .backup-actions { display:grid; gap:12px; }
 .backup-file { display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
