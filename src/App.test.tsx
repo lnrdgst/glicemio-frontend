@@ -113,13 +113,20 @@ describe('onboarding', () => {
     expect(await screen.findByText('6 UI')).toBeTruthy()
   })
 
-  it('mantém as ações rápidas e aplica classes de categoria para a paleta', async () => {
+  it('organiza as seis ações rápidas e abre o cadastro de consulta existente', async () => {
     await db.profiles.put({ id: 'local', name: 'Lia', createdAt: now(), updatedAt: now() })
     renderApp()
-    expect((await screen.findByRole('link', { name: /Registrar glicemia/ })).className).toContain('quick-glucose')
+    const quick = (await screen.findByRole('link', { name: /Registrar glicemia/ })).parentElement!
+    expect(quick.children).toHaveLength(6)
+    expect(quick.children[0].className).toContain('quick-glucose')
     expect(screen.getByRole('link', { name: /Registrar refeição/ }).className).toContain('quick-meal')
     expect(screen.getByRole('link', { name: /Registrar insulina/ }).className).toContain('quick-insulin')
     expect(screen.getByRole('link', { name: /Registrar treino/ }).className).toContain('quick-workout')
-    expect(screen.getByRole('link', { name: /Estou com sintomas/ }).className).toContain('quick-symptoms')
+    const appointment = screen.getByRole('link', { name: /Registrar consulta/ })
+    expect(appointment.getAttribute('href')).toBe('/consulta')
+    expect(appointment.className).toContain('quick-appointment')
+    expect(quick.children[5].className).toContain('quick-symptoms')
+    await userEvent.click(appointment)
+    expect(await screen.findByRole('heading', { name: 'Nova consulta' })).toBeTruthy()
   })
 })
