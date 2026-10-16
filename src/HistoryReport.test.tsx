@@ -114,15 +114,16 @@ it('exibe uma legenda compacta que reutiliza as cores dos pontos', async () => {
   expect(swatches[3].style.backgroundColor).toBe('rgb(113, 175, 165)')
 })
 
-it('abre o Relatório no gráfico a partir da evolução recente da Home', async () => {
+it('mantém o gráfico completo no Relatório sem exibi-lo na Home', async () => {
   await db.glucose.add(stamp({ value: 115, at: minutesAgo(10) }))
-  open('/')
-  const chartLink = await screen.findByRole('link', { name: /gráfico completo de evolução recente/i })
-  expect(chartLink).toHaveAttribute('href', '/relatorio?period=30#grafico-glicemia')
-  await userEvent.click(chartLink)
+  const view = open('/')
+  await screen.findByRole('heading', { name: /olá, teste/i })
+  expect(screen.queryByRole('link', { name: /gráfico completo de evolução recente/i })).toBeNull()
+  view.unmount()
+  open('/relatorio')
   expect(await screen.findByRole('heading', { name: 'Glicemia' })).toBeInTheDocument()
   expect(document.getElementById('grafico-glicemia')).toBeInTheDocument()
-  expect((screen.getByLabelText('Período') as HTMLSelectElement).value).toBe('30')
+  expect(await screen.findByRole('img', { name: 'Gráfico de glicemia com 1 medição' })).toBeInTheDocument()
 })
 
 it('reposiciona no topo ao mudar de tela, inclusive quando a URL recebe filtro', async () => {
@@ -152,9 +153,8 @@ it('leva ao topo ao tocar novamente na guia ativa e respeita destinos com âncor
   expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: 'auto' })
 
   scrollTo.mockClear()
-  await db.glucose.add(stamp({ value: 115, at: minutesAgo(10) }))
-  const chartLink = await screen.findByRole('link', { name: /gráfico completo de evolução recente/i })
-  await userEvent.click(chartLink)
+  cleanup()
+  open('/relatorio?period=30#grafico-glicemia')
   expect(await screen.findByRole('heading', { name: 'Glicemia' })).toBeInTheDocument()
   expect(scrollTo).not.toHaveBeenCalled()
 })

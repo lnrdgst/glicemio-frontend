@@ -8,7 +8,7 @@ import { exportBackup, previewBackup, restoreBackup, type ImportPreview, type Pr
 import { RecordForm, type RecordKind } from './RecordForm'
 import { ProfileForm } from './ProfileForm'
 import { insulinName } from './shared/records'
-import { classifyGlucose, hypoglycemiaGuidance } from './shared/glucose'
+import { classifyGlucose, glucoseSummary, hypoglycemiaGuidance } from './shared/glucose'
 import { shouldShowBasalReminder } from './shared/basalReminder'
 import { Button, Layout, scrollToTop, usePersistence } from './shared/ui'
 import { appointmentCountdown, appointmentDateTime, dateTime, dayHeading, duration, eventDateTime, localDayKey, time } from './shared/format'
@@ -37,27 +37,31 @@ function useProfile() { return useLiveQuery(() => db.profiles.get('local').then(
 function Home() {
   const location = useLocation(); const profile = useProfile()
   const glucose = useLiveQuery(() => db.glucose.orderBy('at').last(), [])
-  const recentGlucose = useLiveQuery(() => db.glucose.filter(item => new Date(item.at).getTime() >= Date.now() - 7 * 86400000).toArray(), []) ?? []
   const meals = useLiveQuery(() => db.meals.orderBy('at').reverse().limit(3).toArray(), []) ?? []
   const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().limit(3).toArray(), []) ?? []
   const appointments = useLiveQuery(() => db.appointments.orderBy('at').toArray(), []) ?? []
   const insulin = useLiveQuery(() => db.insulin.orderBy('at').reverse().toArray(), []) ?? []
   const [clock, setClock] = useState(() => new Date())
-  const reportPeriod = (() => { try { const value = Number(sessionStorage.getItem('glicoponto-report-period')); return [7, 30, 90].includes(value) ? value : 30 } catch { return 30 } })()
   useEffect(() => { const update = () => setClock(new Date()); const timer = window.setInterval(update, 30000); document.addEventListener('visibilitychange', update); return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', update) } }, [])
-  const glucoseState = glucose ? classifyGlucose(glucose.value) : undefined; const glucoseGuidance = glucoseState ? hypoglycemiaGuidance(glucoseState) : undefined; const upcomingAppointments = appointments.filter(appointment => new Date(appointment.at) > clock).slice(0, 2); const imminentAppointment = upcomingAppointments.find(appointment => new Date(appointment.at).getTime() - clock.getTime() <= 24 * 60 * 60 * 1000)
+  const todayKey = localDayKey(clock.toISOString()); const todayGlucose = useLiveQuery(() => db.glucose.filter(item => localDayKey(item.at) === todayKey).toArray(), [todayKey]) ?? []
+  const glucoseState = glucose ? classifyGlucose(glucose.value) : undefined; const glucoseGuidance = glucoseState ? hypoglycemiaGuidance(glucoseState) : undefined; const dailySummary = glucoseSummary(todayGlucose.map(item => item.value)); const upcomingAppointments = appointments.filter(appointment => new Date(appointment.at) > clock).slice(0, 2); const imminentAppointment = upcomingAppointments.find(appointment => new Date(appointment.at).getTime() - clock.getTime() <= 24 * 60 * 60 * 1000)
   if (profile === undefined) return <main className="shell" />
   if (!profile) return <Navigate to="/onboarding" replace />
   return <Layout>{location.state?.success && <p role="status">{location.state.success}</p>}<header><span style={{ color: '#d7865b', fontWeight: 800, letterSpacing: 2 }}>GLICOPONTO</span><h1 style={{ marginBottom: 4 }}>Olá, {profile.name}</h1>{profile.diagnosis && <p className="muted">{profile.diagnosis}</p>}</header>
     {imminentAppointment && <ImminentAppointment appointment={imminentAppointment} reference={clock} />}
     <BasalReminder profile={profile} insulin={insulin} now={clock} />
-    {glucose && glucoseState ? <section className="home-section glucose-section"><div className="home-history"><Link to="/historico?tipo=glucose">Ver histórico</Link></div><section className="home-record card glucose-card" style={{ '--glucose-status-color': glucoseState.color } as React.CSSProperties}><div className="row"><span className="muted">Última medição</span></div><Link className="home-glucose-detail" to={`/detalhes/glucose/${glucose.id}`}><h2 style={{ fontSize: '2.3rem', margin: '6px 0' }}>{glucose.value} <small>mg/dL</small></h2><p className="glucose-status">{glucoseState.label}</p><p className="muted">{glucose.context || 'Sem contexto'} · registrada {eventDateTime(glucose.at)}</p></Link>{recentGlucose.length > 0 && <Link className="home-chart-link" to={`/relatorio?period=${reportPeriod}#grafico-glicemia`} aria-label="Ver gráfico completo de evolução recente no Relatório"><p className="home-chart-title">Evolução recente <span aria-hidden="true">↗</span></p><GlucoseChart points={recentGlucose} compact /></Link>}{glucoseGuidance && <p className="glucose-guidance">{glucoseGuidance}</p>}</section></section> : <section className="card" style={{ margin: '22px 0' }}><h2>Nenhuma medição ainda</h2><p className="muted">Registre seu primeiro Ponto para acompanhar seu contexto.</p></section>}
+    {glucose && glucoseState ? <section className="home-section glucose-section"><div className="home-history"><Link to="/historico?tipo=glucose">Ver histórico</Link></div><section className="home-record card glucose-card" style={{ '--glucose-status-color': glucoseState.color } as React.CSSProperties}><div className="row"><span className="muted">Última medição</span></div><Link className="home-glucose-detail" to={`/detalhes/glucose/${glucose.id}`}><h2 style={{ fontSize: '2.3rem', margin: '6px 0' }}>{glucose.value} <small>mg/dL</small></h2><p className="glucose-status">{glucoseState.label}</p>{glucose.context && glucose.context !== 'Não informado' && <p className="muted">{glucose.context}</p>}<p className="muted">{eventDateTime(glucose.at)}</p></Link>{todayGlucose.length >= 2 && dailySummary && <DailyGlucoseSummary count={todayGlucose.length} summary={dailySummary} />}{glucoseGuidance && <p className="glucose-guidance">{glucoseGuidance}</p>}</section></section> : <section className="card" style={{ margin: '22px 0' }}><h2>Nenhuma medição ainda</h2><p className="muted">Registre seu primeiro Ponto para acompanhar seu contexto.</p></section>}
     <div className="quick"><Link to="/glicemia" className="quick-glucose"><Droplets size={22} /><br />Registrar glicemia</Link><Link to="/refeicao" className="quick-meal"><Soup size={22} /><br />Registrar refeição</Link><Link to="/insulina" className="quick-insulin"><Syringe size={22} /><br />Registrar insulina</Link><Link to="/treino" className="quick-workout"><Dumbbell size={22} /><br />Registrar treino</Link><Link to="/consulta" className="quick-appointment"><Stethoscope size={22} /><br />Registrar consulta</Link><Link to="/episodio" className="symptoms quick-symptoms"><TriangleAlert size={22} /><br />Estou com sintomas</Link></div>
     {upcomingAppointments.length > 0 && <HomeAppointments appointments={upcomingAppointments} reference={clock} />}
     <InsulinSummary />
     <HomeList title="Últimas refeições" empty="Nenhuma refeição registrada." items={meals} render={(record: Meal) => <><span>{record.kind}</span><span className="muted">{eventDateTime(record.at)}</span></>} table="meals" filter="meals" />
     <HomeList title="Últimos treinos" empty="Nenhum treino registrado." items={workouts} render={record => <><span>{record.activity}</span><span className="muted">{duration(record.startedAt, record.endedAt)}</span></>} table="workouts" filter="workouts" />
   </Layout>
+}
+
+function DailyGlucoseSummary({ count, summary }: { count: number; summary: NonNullable<ReturnType<typeof glucoseSummary>> }) {
+  const indicators = [['Mínima', summary.minimum], ['Máxima', summary.maximum], ['Média', Math.round(summary.average)]]
+  return <section className="daily-glucose-summary" aria-label="Resumo glicêmico de hoje"><div className="daily-glucose-heading"><span>Resumo de hoje</span><span>{count} {count === 1 ? 'medição' : 'medições'}</span></div><dl>{indicators.map(([label, value]) => <div key={label as string}><dt>{label}</dt><dd>{value} <small>mg/dL</small></dd></div>)}</dl><p className="muted">A média considera somente as medições registradas hoje.</p></section>
 }
 
 function BasalReminder({ profile, insulin, now: current }: { profile: any; insulin: any[]; now: Date }) {
@@ -149,7 +153,7 @@ function GlucoseChart({ points, compact = false }: { points: { id?: string; at: 
   const path = ordered.map((point, index) => `${x(index)},${y(point.value)}`).join(' ')
   const formatDateTime = (value: string) => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
   const ticks = [maximum, (maximum + minimum) / 2, minimum]
-  return <div className={compact ? 'glucose-chart compact' : 'glucose-chart'}><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Gráfico de glicemia com ${ordered.length} medições`}><title>Gráfico de glicemia</title>{!compact && ticks.map(value => <g key={value}><line className="glucose-chart-grid" x1={inset.left} x2={width - inset.right} y1={y(value)} y2={y(value)} /><text className="glucose-chart-axis" x={inset.left - 6} y={y(value) + 4} textAnchor="end">{Math.round(value)}</text></g>)}<polyline className="glucose-chart-line" points={path} />{ordered.map((point, index) => <circle className="glucose-chart-point" key={point.id ?? `${point.at}-${point.value}`} cx={x(index)} cy={y(point.value)} r="4" fill={classifyGlucose(point.value).color}><title>{`${point.value} mg/dL · ${formatDateTime(point.at)}`}</title></circle>)}</svg></div>
+  return <div className={compact ? 'glucose-chart compact' : 'glucose-chart'}><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`Gráfico de glicemia com ${ordered.length} ${ordered.length === 1 ? 'medição' : 'medições'}`}><title>Gráfico de glicemia</title>{!compact && ticks.map(value => <g key={value}><line className="glucose-chart-grid" x1={inset.left} x2={width - inset.right} y1={y(value)} y2={y(value)} /><text className="glucose-chart-axis" x={inset.left - 6} y={y(value) + 4} textAnchor="end">{Math.round(value)}</text></g>)}<polyline className="glucose-chart-line" points={path} />{ordered.map((point, index) => <circle className="glucose-chart-point" key={point.id ?? `${point.at}-${point.value}`} cx={x(index)} cy={y(point.value)} r="4" fill={classifyGlucose(point.value).color}><title>{`${point.value} mg/dL · ${formatDateTime(point.at)}`}</title></circle>)}</svg></div>
 }
 
 function Report() {
@@ -159,21 +163,18 @@ function Report() {
     const [g, m, i, w, e] = await Promise.all([db.glucose.toArray(), db.meals.toArray(), db.insulin.toArray(), db.workouts.toArray(), db.episodes.toArray()])
     return { g: g.filter(x => +new Date(x.at) >= since), m: m.filter(x => +new Date(x.at) >= since), i: i.filter(x => +new Date(x.at) >= since), w: w.filter(x => +new Date(x.startedAt) >= since), e: e.filter(x => +new Date(x.startedAt) >= since) }
   }, [period])
-  const values = data?.g.map(x => x.value) ?? []
-  const minimum = values.length ? Math.min(...values) : undefined
-  const maximum = values.length ? Math.max(...values) : undefined
-  const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : undefined
-  const glucoseSummary = [
+  const values = data?.g.map(x => x.value) ?? []; const summary = glucoseSummary(values)
+  const reportGlucoseSummary = [
     { title: 'Medições', value: values.length },
-    { title: 'Mínima', value: minimum === undefined ? '—' : `${minimum} mg/dL` },
-    { title: 'Máxima', value: maximum === undefined ? '—' : `${maximum} mg/dL` },
-    { title: 'Média aritmética simples', value: average === undefined ? '—' : `${average.toFixed(0)} mg/dL` },
+    { title: 'Mínima', value: summary === undefined ? '—' : `${summary.minimum} mg/dL` },
+    { title: 'Máxima', value: summary === undefined ? '—' : `${summary.maximum} mg/dL` },
+    { title: 'Média aritmética simples', value: summary === undefined ? '—' : `${summary.average.toFixed(0)} mg/dL` },
   ]
   const eventCards = [[Soup, 'Refeições', data?.m.length ?? 0], [Syringe, 'Aplicações de insulina', data?.i.length ?? 0], [Dumbbell, 'Treinos', data?.w.length ?? 0], [TriangleAlert, 'Episódios', data?.e.length ?? 0]] as const
   useEffect(() => { try { sessionStorage.setItem('glicoponto-report-period', String(period)) } catch { /* A navegação continua disponível sem armazenamento da preferência. */ } }, [period])
   useEffect(() => { if (location.hash !== '#grafico-glicemia' || data === undefined) return; const frame = window.requestAnimationFrame(() => document.getElementById('grafico-glicemia')?.scrollIntoView?.({ block: 'start' })); return () => window.cancelAnimationFrame(frame) }, [data, location.hash])
   const changePeriod = (value: number) => { setPeriod(value); setSearch({ period: String(value) }, { replace: true }) }
-  return <Layout><h1>Relatório</h1><label className="label">Período<select className="field" value={period} onChange={e => changePeriod(Number(e.target.value))}><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option></select></label><section className="report-section" id="grafico-glicemia" tabIndex={-1}><h2>Glicemia</h2><dl className="glucose-summary">{glucoseSummary.map(({ title, value }) => <div key={title}><dt>{title}</dt><dd>{value}</dd></div>)}</dl>{values.length ? <><GlucoseChart points={data?.g ?? []} /><GlucoseLegend /><p className="muted">A média considera somente as medições cadastradas e não representa monitoramento contínuo.</p></> : <div className="glucose-chart-empty"><p className="muted">Nenhuma medição cadastrada neste período.</p></div>}</section><section className="report-section"><h2>Acontecimentos registrados</h2><div className="report-cards">{eventCards.map(([Icon, title, value]) => <section className="card" key={title}><span className="report-label"><Icon size={16} aria-hidden="true" /> {title}</span><h3>{value}</h3></section>)}</div><p className="muted">As contagens representam somente os registros cadastrados no período.</p></section></Layout>
+  return <Layout><h1>Relatório</h1><label className="label">Período<select className="field" value={period} onChange={e => changePeriod(Number(e.target.value))}><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option></select></label><section className="report-section" id="grafico-glicemia" tabIndex={-1}><h2>Glicemia</h2><dl className="glucose-summary">{reportGlucoseSummary.map(({ title, value }) => <div key={title}><dt>{title}</dt><dd>{value}</dd></div>)}</dl>{values.length ? <><GlucoseChart points={data?.g ?? []} /><GlucoseLegend /><p className="muted">A média considera somente as medições cadastradas e não representa monitoramento contínuo.</p></> : <div className="glucose-chart-empty"><p className="muted">Nenhuma medição cadastrada neste período.</p></div>}</section><section className="report-section"><h2>Acontecimentos registrados</h2><div className="report-cards">{eventCards.map(([Icon, title, value]) => <section className="card" key={title}><span className="report-label"><Icon size={16} aria-hidden="true" /> {title}</span><h3>{value}</h3></section>)}</div><p className="muted">As contagens representam somente os registros cadastrados no período.</p></section></Layout>
 }
 
 function GlucoseLegend() {

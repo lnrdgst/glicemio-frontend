@@ -18,6 +18,14 @@ export const classifyGlucose = (value: number): GlucoseClassification => {
   return { id: 'high-attention', label: 'Atenção alta', color: '#CE6872' }
 }
 
+export const glucoseSummary = (values: number[]) => {
+  if (!values.length) return undefined
+  const minimum = Math.min(...values)
+  const maximum = Math.max(...values)
+  const average = values.reduce((sum, value) => sum + value, 0) / values.length
+  return { minimum, maximum, average }
+}
+
 export const hypoglycemiaGuidance = (classification: GlucoseClassification) => {
   if (classification.hypoglycemiaLevel === 2) return 'Atenção alta: siga agora seu plano individual de tratamento da hipoglicemia.'
   if (classification.hypoglycemiaLevel === 1) return 'Siga seu plano individual de tratamento da hipoglicemia.'
