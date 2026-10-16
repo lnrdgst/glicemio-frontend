@@ -45,5 +45,7 @@ it('mantém o vínculo com a refeição sem exibir a informação redundante na 
   const history = screen.getAllByRole('link', { name: /Ver histórico/ }).find(link => link.getAttribute('href') === '/historico?tipo=glucose')!
   expect(history.closest('.home-history')).toBeTruthy()
   expect(history.closest('.glucose-card')).toBeNull()
-  expect(history.closest('.home-section')!.querySelector('.glucose-card')).toBeTruthy()
+  const section = history.closest('.home-section')!
+  expect(section).toHaveClass('glucose-section')
+  expect(section.querySelector('.glucose-card')).toBeTruthy()
 })

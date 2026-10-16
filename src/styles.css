@@ -31,6 +31,7 @@ select.field { text-overflow: ellipsis; }
 .glucose-guidance { border-left:2px solid var(--glucose-status-color); color:var(--color-muted); font-size:.85rem; line-height:1.4; margin:12px 0 0; padding-left:10px; }
 .home-record:focus-visible, .home-list-item:focus-visible, .home-appointment:focus-visible, .insulin-line:focus-visible, .history-link:focus-visible { outline:2px solid var(--color-copper); outline-offset:3px; }
 .home-section { margin-top:22px; }
+.glucose-section { margin-bottom:22px; }
 .home-history { display:flex; justify-content:flex-end; min-height:24px; margin-bottom:6px; }
 .home-history > a, .insulin-history-links a { color:var(--color-copper); font-size:.9rem; text-decoration:none; }
 .insulin-history-links { display:flex; gap:10px; }
