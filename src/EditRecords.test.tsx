@@ -65,6 +65,7 @@ it('reposiciona Histórico e atualiza relatório após editar horário e glicemi
 
 it('mostra somente a categoria existente na Home e preserva a outra ao editar', async () => {
   const basal = stamp({ kind: 'Basal/lenta' as const, dose: 18, at: iso('2026-10-14T21:00') }); await db.insulin.add(basal)
+  await db.glucose.add(stamp({ value: 115, at: iso('2026-10-14T22:00') }))
   open('/'); expect(await screen.findByText('18 UI')).toBeInTheDocument(); expect(screen.queryByText('Rápida')).toBeNull()
   cleanup(); open('/detalhes/insulin/' + basal.id); await edit(); change('Hora', '22:00'); await save(); expect((await db.insulin.get(basal.id))?.dose).toBe(18)
 })

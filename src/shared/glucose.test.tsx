@@ -55,6 +55,37 @@ it('mantém o vínculo com a refeição sem exibir a informação redundante na 
   expect(section.querySelector('.glucose-card')).toBeTruthy()
 })
 
+it('mostra as últimas aplicações basal e rápida anteriores à glicemia, sem incluir aplicações posteriores', async () => {
+  const glucose = stamp({ value: 115, at: '2026-10-17T12:00:00.000Z' })
+  const basal = stamp({ kind: 'Basal/lenta' as const, dose: 18, at: '2026-10-17T08:00:00.000Z', medicationName: 'Lantus' })
+  const rapid = stamp({ kind: 'Rápida' as const, dose: 4.5, at: '2026-10-17T11:30:00.000Z', medicationName: 'NovoRapid' })
+  const later = stamp({ kind: 'Basal/lenta' as const, dose: 20, at: '2026-10-17T13:00:00.000Z', medicationName: 'Tresiba' })
+  await db.glucose.add(glucose); await db.insulin.bulkAdd([basal, rapid, later])
+  render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
+  const context = await screen.findByLabelText('Últimas aplicações anteriores à medição')
+  expect(context).toHaveTextContent('Basal')
+  expect(context).toHaveTextContent('Lantus')
+  expect(context).toHaveTextContent('18 UI')
+  expect(context).toHaveTextContent('Rápida')
+  expect(context).toHaveTextContent('NovoRapid')
+  expect(context).toHaveTextContent('4,5 UI')
+  expect(context).not.toHaveTextContent('Tresiba')
+  expect(screen.queryByRole('heading', { name: 'Últimas aplicações de insulina' })).toBeNull()
+  expect(screen.getByRole('link', { name: /Basal.*Lantus/i })).toHaveAttribute('href', `/detalhes/insulin/${basal.id}`)
+})
+
+it('exibe somente a aplicação rápida elegível e oculta o contexto sem aplicações anteriores', async () => {
+  const glucose = stamp({ value: 115, at: '2026-10-17T12:00:00.000Z' })
+  const rapid = stamp({ kind: 'Rápida' as const, dose: 3, at: '2026-10-17T12:00:00.000Z', medicationName: 'Humalog' })
+  await db.glucose.add(glucose); await db.insulin.add(rapid)
+  render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
+  const context = await screen.findByLabelText('Últimas aplicações anteriores à medição')
+  expect(context).toHaveTextContent('Rápida')
+  expect(context).not.toHaveTextContent('Basal')
+  await db.insulin.delete(rapid.id)
+  await waitFor(() => expect(screen.queryByLabelText('Últimas aplicações anteriores à medição')).toBeNull())
+})
+
 it('exibe resumo somente com duas ou mais glicemias do dia local e atualiza após exclusão', async () => {
   vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 9, 15, 18, 0))
   const yesterday = stamp({ value: 240, at: new Date(2026, 9, 14, 22, 0).toISOString() })

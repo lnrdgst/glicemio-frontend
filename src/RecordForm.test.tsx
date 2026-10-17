@@ -227,7 +227,7 @@ describe('persistência dos formulários', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Registro salvo')
     const records = await db.table(table).toArray(); expect(records).toHaveLength(1)
     if (kind === 'glicemia') expect(await screen.findByText('123')).toBeInTheDocument()
-    if (kind === 'insulina') expect(await screen.findByText('4,5 UI')).toBeInTheDocument()
+    if (kind === 'insulina') expect(await screen.findByRole('link', { name: /Registrar insulina/ })).toBeInTheDocument()
     if (kind === 'refeicao') expect(await screen.findByText('Almoço')).toBeInTheDocument()
     if (kind === 'treino') expect(await screen.findByText('Caminhada')).toBeInTheDocument()
     view.unmount()
@@ -378,6 +378,7 @@ describe('insulina', () => {
   it('mostra nomes, doses e horários reais independentes na Home', async () => {
     const basal = await applied('glargine-u100', 18, '2026-10-13T21:15', 'Basal/lenta')
     const rapid = await applied('lispro', 4, '2026-10-14T12:00')
+    await db.glucose.add(stamp({ value: 115, at: iso('2026-10-14T13:00') }))
     open('/'); expect(await screen.findByText('Glargina U100')).toBeInTheDocument(); expect(screen.getByText('Lispro')).toBeInTheDocument()
     expect(screen.getByText('18 UI')).toBeInTheDocument(); expect(screen.getByText('4 UI')).toBeInTheDocument()
     expect(await db.insulin.get(basal.id)).toEqual(basal); expect(await db.insulin.get(rapid.id)).toEqual(rapid)
