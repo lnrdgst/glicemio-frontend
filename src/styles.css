@@ -45,6 +45,7 @@ select.field { text-overflow: ellipsis; }
 .glucose-insulin-context-line b { color:#A99BCB; }
 .glucose-insulin-context-line span, .glucose-insulin-context-line small { overflow-wrap:anywhere; }
 .glucose-insulin-context-line small { color:var(--color-muted); }
+.glucose-insulin-after { font-style:italic; }
 .glucose-insulin-context-line strong { color:#A99BCB; white-space:nowrap; }
 .home-list-item { display:flex; color:inherit; text-decoration:none; padding:8px 0; }
 .home-appointment { align-items:center; color:inherit; display:flex; gap:12px; justify-content:space-between; overflow-wrap:anywhere; padding:10px 0; text-decoration:none; }
