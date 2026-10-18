@@ -189,14 +189,35 @@ it('exporta JSON completo incluindo legados, sem modificar o armazenamento', asy
   expect(await db.insulin.get(legacy.id)).toEqual(legacy); expect(revoke).toHaveBeenCalledWith('blob:test')
 })
 
-it('exclui somente após confirmação e preserva os outros registros', async () => {
-  const glucose = stamp({ value: 123, at: now() }); const meal = stamp({ kind: 'Almoço', at: now() })
-  await db.glucose.add(glucose); await db.meals.add(meal)
-  const confirmation = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
-  open('/historico'); await userEvent.click(await screen.findByRole('link', { name: /123 mg\/dL/ }))
-  await userEvent.click(await screen.findByRole('button', { name: 'Excluir' })); expect(await db.glucose.count()).toBe(1)
-  await userEvent.click(screen.getByRole('button', { name: 'Excluir' })); await waitFor(async () => expect(await db.glucose.count()).toBe(0))
-  expect(confirmation).toHaveBeenCalledTimes(2); expect(await db.meals.get(meal.id)).toEqual(meal)
+it('confirma a exclusão no cartão de detalhes e preserva referências sem cascata', async () => {
+  const meal = stamp({ kind: 'Almoço', at: now() }); const glucose = stamp({ value: 123, at: now(), mealId: meal.id })
+  await db.meals.add(meal); await db.glucose.add(glucose)
+  open('/detalhes/meals/' + meal.id)
+  expect(await screen.findByRole('heading', { name: 'Refeição' })).toBeInTheDocument()
+  expect(document.querySelector('.details-heading')).toBeTruthy()
+  expect(document.querySelector('.details-actions')).toBeTruthy()
+  await userEvent.click(screen.getByRole('button', { name: 'Excluir' }))
+  const dialog = screen.getByRole('alertdialog')
+  expect(dialog).toHaveTextContent('Excluir este registro?')
+  expect(dialog).toHaveTextContent('Esta ação não poderá ser desfeita.')
+  await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+  expect(await db.meals.get(meal.id)).toEqual(meal)
+  expect(screen.queryByRole('alertdialog')).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: 'Excluir' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Excluir registro' }))
+  await waitFor(async () => expect(await db.meals.get(meal.id)).toBeUndefined())
+  expect(await db.glucose.get(glucose.id)).toEqual(glucose)
+  expect(await screen.findByRole('status')).toHaveTextContent('Registro excluído deste dispositivo.')
+})
+
+it('mantém o registro e informa falha se a exclusão local não persistir', async () => {
+  const meal = stamp({ kind: 'Almoço', at: now() }); await db.meals.add(meal)
+  vi.spyOn(db.meals, 'delete').mockRejectedValueOnce(new Error('IndexedDB indisponível'))
+  open('/detalhes/meals/' + meal.id)
+  await userEvent.click(await screen.findByRole('button', { name: 'Excluir' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Excluir registro' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível excluir o registro')
+  expect(await db.meals.get(meal.id)).toEqual(meal)
 })
 
 it('informa falha de leitura sem redirecionar para cadastro ou sobrescrever perfil', async () => {

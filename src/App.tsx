@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { CalendarDays, Droplets, Dumbbell, Soup, Stethoscope, Syringe, TriangleAlert } from 'lucide-react'
+import { CalendarDays, Droplets, Dumbbell, Pencil, Soup, Stethoscope, Syringe, Trash2, TriangleAlert } from 'lucide-react'
 import { db, now, stamp, type Appointment, type Insulin, type Meal } from './database/db'
 import { exportBackup, previewBackup, restoreBackup, type ImportPreview, type ProfileStrategy } from './database/backup'
 import { RecordForm, type RecordKind } from './RecordForm'
@@ -22,9 +22,10 @@ const detailsFor: Record<string, { title: string; edit: string }> = {
 const attendanceLabel = (record: any) => (record.attendanceType === 'other' ? record.attendanceTypeOther || 'Outro' : ({ general: 'Clínico geral', endocrinologist: 'Endocrinologista', nutritionist: 'Nutricionista', ophthalmologist: 'Oftalmologista' } as Record<string, string>)[record.attendanceType] || '')
 const appointmentSummary = (record: any) => [attendanceLabel(record), record.professional].filter(Boolean).join(' · ') || 'Profissional não informado'
 
-function Delete({ run }: { run: () => Promise<void> }) {
-  const { run: persist, saving, error } = usePersistence()
-  return <span><button className="danger" disabled={saving} onClick={() => { if (confirm('Excluir este registro?')) void persist(run) }}>Excluir</button>{error && <span role="alert">Não foi possível excluir o registro. Tente novamente.</span>}</span>
+function Delete({ run, onDeleted }: { run: () => Promise<void>; onDeleted: () => void }) {
+  const { run: persist, saving, error } = usePersistence(); const [confirming, setConfirming] = useState(false)
+  const remove = () => void persist(async () => { await run(); onDeleted() })
+  return <span className="details-delete">{confirming ? <div className="delete-confirm" role="alertdialog" aria-modal="true" aria-labelledby="delete-record-title"><p id="delete-record-title"><b>Excluir este registro?</b></p><p className="muted">Esta ação não poderá ser desfeita.</p><div className="actions"><button type="button" className="secondary" disabled={saving} onClick={() => setConfirming(false)}>Cancelar</button><button type="button" className="danger" disabled={saving} onClick={remove}><Trash2 size={18} aria-hidden="true" />{saving ? 'Excluindo…' : 'Excluir registro'}</button></div></div> : <button type="button" className="danger" onClick={() => setConfirming(true)}><Trash2 size={18} aria-hidden="true" />Excluir</button>}{error && <span role="alert">Não foi possível excluir o registro. Tente novamente.</span>}</span>
 }
 
 function Onboarding() {
@@ -103,13 +104,13 @@ function Episode() {
 }
 
 function Details() {
-  const { table = '', id = '' } = useParams(); const config = detailsFor[table]; const record = useLiveQuery(() => config ? db.table(table).get(id) : Promise.resolve(undefined), [table, id, config]) as any
+  const { table = '', id = '' } = useParams(); const nav = useNavigate(); const config = detailsFor[table]; const record = useLiveQuery(() => config ? db.table(table).get(id) : Promise.resolve(undefined), [table, id, config]) as any
   if (!config) return <Navigate to="/historico" replace />
   if (record === undefined) return <Layout><h1>Carregando registro…</h1></Layout>
   if (!record) return <Layout><Link to="/" className="muted">← Início</Link><section className="card"><h1>Registro não encontrado</h1></section></Layout>
   const at = record.at || record.startedAt
   const detail = table === 'glucose' ? `${record.value} mg/dL · ${record.context || 'Sem contexto'}` : table === 'insulin' ? `${insulinName(record) || record.kind} · ${record.dose.toLocaleString('pt-BR')} UI` : table === 'meals' ? record.kind : table === 'workouts' ? `${record.activity} · ${duration(record.startedAt, record.endedAt)}` : table === 'episodes' ? record.symptoms.join(', ') || 'Sem sintomas selecionados' : appointmentSummary(record)
-  return <Layout><Link to="/" className="muted">← Início</Link><section className="card details"><span className="muted">{config.title}</span><h1>{detail}</h1><p>{eventDateTime(at)}</p>{record.note && <p className="muted">{record.note}</p>}{record.description && <p className="muted">{record.description}</p>}<div className="actions"><Link className="primary" to={config.edit === 'episodio' ? `/episodio/${id}/editar` : `/${config.edit}/${id}/editar`}>Editar</Link><Delete run={() => db.table(table).delete(id)} /></div></section></Layout>
+  return <Layout><Link to="/" className="muted">← Início</Link><section className="card details"><div className="details-heading"><h1>{config.title}</h1></div><div className="details-content"><p className="details-primary">{detail}</p><p>{eventDateTime(at)}</p>{record.note && <p className="muted">{record.note}</p>}{record.description && <p className="muted">{record.description}</p>}</div><div className="details-actions"><Link className="primary" to={config.edit === 'episodio' ? `/episodio/${id}/editar` : `/${config.edit}/${id}/editar`}><Pencil size={18} aria-hidden="true" />Editar</Link><Delete run={() => (db as any)[table].delete(id)} onDeleted={() => nav(`/historico?tipo=${table}`, { state: { success: 'Registro excluído deste dispositivo.' } })} /></div></section></Layout>
 }
 
 type HistoryFilter = 'all' | 'glucose' | 'meals' | 'insulin' | 'workouts' | 'episodes' | 'appointments'
@@ -118,7 +119,7 @@ const historyFilters: { value: HistoryFilter; label: string }[] = [{ value: 'all
 const sortLines = (lines: Line[]) => lines.sort((a, b) => +new Date(b.at) - +new Date(a.at) || a.table.localeCompare(b.table) || a.id.localeCompare(b.id))
 
 function History() {
-  const [search, setSearch] = useSearchParams(); const requested = historyFilters.some(item => item.value === search.get('tipo')) ? search.get('tipo') as HistoryFilter : 'all'; const [filter, setFilter] = useState<HistoryFilter>(requested); const [shown, setShown] = useState(20); const subtype = search.get('subtipo')
+  const location = useLocation(); const [search, setSearch] = useSearchParams(); const requested = historyFilters.some(item => item.value === search.get('tipo')) ? search.get('tipo') as HistoryFilter : 'all'; const [filter, setFilter] = useState<HistoryFilter>(requested); const [shown, setShown] = useState(20); const subtype = search.get('subtipo')
   useEffect(() => { setFilter(requested); setShown(20) }, [requested])
   const history = useLiveQuery(async () => {
     const take = shown + 1
@@ -136,7 +137,7 @@ function History() {
   const { lines, hasMore } = history
   const groups = lines.reduce<{ key: string; title: string; lines: Line[] }[]>((days, line) => { const key = localDayKey(line.at); const current = days.at(-1); if (current?.key === key) current.lines.push(line); else days.push({ key, title: dayHeading(line.at), lines: [line] }); return days }, [])
   const changeFilter = (value: HistoryFilter) => { setSearch(value === 'all' ? {} : { tipo: value }); setShown(20) }
-  return <Layout><h1>Histórico</h1><div className="history-filters" role="group" aria-label="Filtrar histórico">{historyFilters.map(item => <button key={item.value} type="button" className={filter === item.value ? 'secondary active' : 'secondary'} onClick={() => changeFilter(item.value)}>{item.label}</button>)}</div>{lines.length ? <><div className="timeline">{groups.map(group => <section className="history-day" key={group.key}><h2>{group.title}</h2>{group.lines.map(line => <div className="item" key={`${line.table}-${line.id}`}><Link className="history-link" to={`/detalhes/${line.table}/${line.recordId}`}><b>{time(line.at)} · {line.title}</b>{line.detail && <span className="muted">{line.detail}</span>}</Link></div>)}</section>)}</div>{hasMore && <button className="secondary history-more" type="button" onClick={() => setShown(value => value + 20)}>Carregar registros anteriores</button>}</> : <section className="card"><p>Nenhum registro neste filtro.</p></section>}</Layout>
+  return <Layout>{location.state?.success && <p role="status">{location.state.success}</p>}<h1>Histórico</h1><div className="history-filters" role="group" aria-label="Filtrar histórico">{historyFilters.map(item => <button key={item.value} type="button" className={filter === item.value ? 'secondary active' : 'secondary'} onClick={() => changeFilter(item.value)}>{item.label}</button>)}</div>{lines.length ? <><div className="timeline">{groups.map(group => <section className="history-day" key={group.key}><h2>{group.title}</h2>{group.lines.map(line => <div className="item" key={`${line.table}-${line.id}`}><Link className="history-link" to={`/detalhes/${line.table}/${line.recordId}`}><b>{time(line.at)} · {line.title}</b>{line.detail && <span className="muted">{line.detail}</span>}</Link></div>)}</section>)}</div>{hasMore && <button className="secondary history-more" type="button" onClick={() => setShown(value => value + 20)}>Carregar registros anteriores</button>}</> : <section className="card"><p>Nenhum registro neste filtro.</p></section>}</Layout>
 }
 
 function GlucoseChart({ points, compact = false }: { points: { id?: string; at: string; value: number; context?: string }[]; compact?: boolean }) {
