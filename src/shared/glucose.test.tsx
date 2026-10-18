@@ -40,11 +40,11 @@ it('atualiza o cartão da Home após novo registro e edição sem alterar o regi
   expect(await db.glucose.get(record.id)).toMatchObject({ id: record.id, createdAt: record.createdAt, value: 115, context: 'Jejum' })
 })
 
-it('mantém o vínculo com a refeição sem exibir a informação redundante na Home', async () => {
+it('exibe o contexto e a refeição vinculada à última medição na Home', async () => {
   const meal = stamp({ kind: 'Almoço', at: now() }); await db.meals.add(meal)
   const glucose = stamp({ value: 115, at: now(), context: 'Após refeição', mealId: meal.id }); await db.glucose.add(glucose)
   render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
-  expect(await screen.findByText('Após refeição', { exact: false })).toBeInTheDocument()
+  expect(await screen.findByText('Após refeição · Almoço')).toBeInTheDocument()
   expect(screen.queryByText('Associada a uma refeição')).toBeNull()
   expect((await db.glucose.get(glucose.id))?.mealId).toBe(meal.id)
   const history = screen.getAllByRole('link', { name: /Ver histórico/ }).find(link => link.getAttribute('href') === '/historico?tipo=glucose')!
@@ -53,6 +53,20 @@ it('mantém o vínculo com a refeição sem exibir a informação redundante na 
   const section = history.closest('.home-section')!
   expect(section).toHaveClass('glucose-section')
   expect(section.querySelector('.glucose-card')).toBeTruthy()
+})
+
+it('preserva somente o contexto para associação ausente ou inválida e não infere contexto', async () => {
+  const invalid = stamp({ value: 115, at: '2026-10-17T09:00:00.000Z', context: 'Jejum', mealId: 'refeição-inexistente' }); await db.glucose.add(invalid)
+  const view = render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
+  expect(await screen.findByText('Jejum')).toBeInTheDocument()
+  expect(screen.queryByText(/Refeição associada/)).toBeNull()
+  view.unmount()
+  await Promise.all(db.tables.map(table => table.clear()))
+  await db.profiles.put({ id: 'local', name: 'Teste', createdAt: now(), updatedAt: now() })
+  const meal = stamp({ kind: 'Café da manhã', at: '2026-10-17T08:00:00.000Z' }); const glucose = stamp({ value: 115, at: '2026-10-17T09:00:00.000Z', context: 'Não informado', mealId: meal.id })
+  await db.meals.add(meal); await db.glucose.add(glucose)
+  render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
+  expect(await screen.findByText('Refeição associada: Café da manhã')).toBeInTheDocument()
 })
 
 it('mostra as últimas aplicações basal e rápida, incluindo a mais recente posterior à glicemia', async () => {
