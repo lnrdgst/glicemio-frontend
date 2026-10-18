@@ -33,6 +33,7 @@ it('atualiza o cartão da Home após novo registro e edição sem alterar o regi
   const record = stamp({ value: 65, at: now(), context: 'Jejum' }); await db.glucose.add(record)
   render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
   expect(await screen.findByText('Hipoglicemia nível 1')).toBeInTheDocument()
+  expect(screen.getByText(/^Última medição · Hoje, às/)).toBeInTheDocument()
   expect(screen.getByText(/plano individual de tratamento da hipoglicemia/i)).toBeInTheDocument()
   await db.glucose.put({ ...record, value: 115, updatedAt: now() })
   expect(await screen.findByText('Dentro da faixa definida')).toBeInTheDocument()
@@ -66,7 +67,11 @@ it('preserva somente o contexto para associação ausente ou inválida e não in
   const meal = stamp({ kind: 'Café da manhã', at: '2026-10-17T08:00:00.000Z' }); const glucose = stamp({ value: 115, at: '2026-10-17T09:00:00.000Z', context: 'Não informado', mealId: meal.id })
   await db.meals.add(meal); await db.glucose.add(glucose)
   render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
-  expect(await screen.findByText('Refeição associada: Café da manhã')).toBeInTheDocument()
+  const glucoseDetail = await screen.findByRole('link', { name: /115 mg\/dL/ })
+  await waitFor(() => expect(glucoseDetail).toHaveTextContent('Café da manhã'))
+  expect(screen.queryByText(/Refeição associada/)).toBeNull()
+  await db.glucose.put({ ...glucose, mealId: undefined, updatedAt: now() })
+  await waitFor(() => expect(document.querySelector('.home-glucose-detail')).not.toHaveTextContent('Café da manhã'))
 })
 
 it('mostra as últimas aplicações basal e rápida, incluindo a mais recente posterior à glicemia', async () => {

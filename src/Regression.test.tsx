@@ -144,7 +144,7 @@ it('destaca somente a consulta mais próxima dentro das próximas 24 horas', asy
   expect(highlight).toHaveTextContent('Hoje, 10/04/2026 às 17:00')
   expect(highlight).toHaveTextContent('em 1h45min')
   expect(highlight).toHaveAttribute('href', `/detalhes/appointments/${first.id}`)
-  expect(highlight.compareDocumentPosition(screen.getByText('Última medição').closest('section')!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+  expect(highlight.compareDocumentPosition(screen.getByText(/^Última medição ·/).closest('section')!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
 })
 
 it('não destaca consultas sem proximidade ou quando não há consultas futuras', async () => {
