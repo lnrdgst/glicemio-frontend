@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activitySuggestions, insulinCatalog, medicationIdentity, parseActivities, previousInsulin, recentMeal, suggestedMealKind } from './records'
+import { activitySuggestions, insulinCatalog, mealAssociationOptions, medicationIdentity, parseActivities, previousInsulin, recentMeal, suggestedMealKind } from './records'
 import { stamp } from '../database/db'
 import { duration, iso, localInput } from './format'
 
@@ -28,6 +28,12 @@ describe('regras locais', () => {
     expect(recentMeal(meals, '2026-10-14T15:00')?.kind).toBe('Almoço')
     expect(recentMeal(meals, '2026-10-14T15:01')).toBeUndefined()
     expect(meals).toEqual(copy)
+  })
+  it('limita associações às três refeições anteriores e preserva somente o vínculo em edição', () => {
+    const meals = [8, 9, 10, 11, 14].map(hour => stamp({ kind: `Refeição ${hour}`, at: iso(`2026-10-14T${String(hour).padStart(2, '0')}:00`) }))
+    const options = mealAssociationOptions(meals, '2026-10-14T12:00')
+    expect(options.map(meal => meal.kind)).toEqual(['Refeição 11', 'Refeição 10', 'Refeição 9'])
+    expect(mealAssociationOptions(meals, '2026-10-14T12:00', meals[0].id).map(meal => meal.kind)).toEqual(['Refeição 11', 'Refeição 10', 'Refeição 9', 'Refeição 8'])
   })
   it.each([['2026-10-14T09:59', 'Café da manhã'], ['2026-10-14T10:00', 'Almoço'], ['2026-10-14T14:59', 'Almoço'], ['2026-10-14T15:00', 'Lanche'], ['2026-10-14T17:59', 'Lanche'], ['2026-10-14T18:00', 'Jantar'], ['2026-10-14T23:59', 'Jantar']])('sugere %s para %s', (at, expected) => {
     expect(suggestedMealKind(at)).toBe(expected)

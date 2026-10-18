@@ -25,6 +25,12 @@ export function recentMeal(meals: Meal[], at: string) {
   return meals.filter(meal => { const elapsed = measured - new Date(meal.at).getTime(); return elapsed >= 0 && elapsed <= 3 * 60 * 60 * 1000 })
     .sort((a, b) => +new Date(b.at) - +new Date(a.at))[0]
 }
+export function mealAssociationOptions(meals: Meal[], at: string, preservedMealId?: string) {
+  const atTime = new Date(at).getTime()
+  const recent = Number.isFinite(atTime) ? meals.filter(meal => new Date(meal.at).getTime() <= atTime).sort((first, second) => +new Date(second.at) - +new Date(first.at)).slice(0, 3) : []
+  const preserved = preservedMealId ? meals.find(meal => meal.id === preservedMealId) : undefined
+  return preserved && !recent.some(meal => meal.id === preserved.id) ? [...recent, preserved] : recent
+}
 export type Medication = { id: string; name: string; brands: string; kind: Insulin['kind']; pharmacologicalClass: string }
 export const insulinCatalog: readonly Medication[] = [
   { id: 'nph', name: 'NPH', brands: 'Humulin N / Novolin N', kind: 'Basal/lenta', pharmacologicalClass: 'Humana de ação intermediária' },
