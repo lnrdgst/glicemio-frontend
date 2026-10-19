@@ -4,7 +4,7 @@
 html { min-width: 0; }
 fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 button:disabled { cursor: wait; opacity: .65; }
-.shell, .card, .field, .row > *, .quick > * { min-width: 0; }
+.shell, .card, .field, .row > * { min-width: 0; }
 .shell { overflow-wrap: anywhere; }
 .field { max-width: 100%; }
 input.field[type="date"], input.field[type="time"] { color-scheme: dark; appearance: auto; min-height: 48px; }
@@ -12,19 +12,6 @@ input.field[type="date"]:focus-visible, input.field[type="time"]:focus-visible {
 select.field { text-overflow: ellipsis; }
 .nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; flex: 1 1 0; min-width: 0; max-width: 120px; min-height: 64px; }
 .nav a svg { flex-shrink: 0; }
-.quick a.quick-glucose { background:#342218; border-color:var(--quick-glucose); }
-.quick a.quick-meal { border-color:var(--quick-meal); }
-.quick a.quick-insulin { border-color:var(--quick-insulin); }
-.quick a.quick-workout { border-color:var(--quick-workout); }
-.quick a.quick-appointment { border-color:var(--quick-appointment); }
-.quick a.quick-symptoms { background:#3a2026; border-color:var(--quick-symptoms); color:#fff0f1; }
-.quick a.quick-glucose svg { color:var(--quick-glucose); }
-.quick a.quick-meal svg { color:var(--quick-meal); }
-.quick a.quick-insulin svg { color:var(--quick-insulin); }
-.quick a.quick-workout svg { color:var(--quick-workout); }
-.quick a.quick-appointment svg { color:#E7DFDA; }
-.quick a.quick-symptoms svg { color:var(--quick-symptoms); }
-.quick a:focus-visible { outline:2px solid #fff; outline-offset:3px; }
 .home-record { display:block; color:inherit; text-decoration:none; margin:0; }
 .home-record.glucose-card { border:2px solid var(--glucose-status-color); }
 .glucose-status { color:var(--glucose-status-color); font-size:.9rem; font-weight:700; margin:0 0 6px; }
@@ -34,11 +21,24 @@ select.field { text-overflow: ellipsis; }
 .glucose-section { margin-bottom:22px; }
 .home-history { display:flex; justify-content:flex-end; min-height:24px; margin-bottom:6px; }
 .home-history > a { color:var(--color-copper); font-size:.9rem; text-decoration:none; }
-.home-card-heading { border-bottom:1px solid #39322e; margin-bottom:10px; padding:0 0 10px; text-align:center; }
+.home-card-heading { border-bottom:1px solid #39322e; margin-bottom:10px; padding:0 50px 10px; position:relative; text-align:center; }
 .home-card-heading h2 { font-size:1.1rem; margin:0; }
 .home-list-card { padding-top:14px; }
+.home-add { align-items:center; border:1px solid currentColor; border-radius:50%; display:inline-flex; height:44px; justify-content:center; text-decoration:none; width:44px; }
+.home-add:focus-visible, .symptoms-action:focus-visible { outline:2px solid #fff; outline-offset:3px; }
+.home-card-heading .home-add { position:absolute; right:0; top:50%; transform:translateY(-50%); }
+.home-add-glucose { color:var(--quick-glucose); }
+.home-add-insulin { color:var(--quick-insulin); }
+.home-add-meal { color:var(--quick-meal); }
+.home-add-workout { color:var(--quick-workout); }
+.home-add-appointment { color:#E7DFDA; }
+.glucose-card-heading { align-items:center; display:flex; justify-content:space-between; min-height:44px; }
+.glucose-card-heading h2 { font-size:1.1rem; margin:0; }
+.glucose-empty-card { margin:0; }
 .glucose-insulin-context { border-top:1px solid #39322e; margin-top:14px; padding-top:12px; }
-.glucose-insulin-context > p { color:#A99BCB; font-size:.8rem; font-weight:700; margin:0 0 4px; }
+.glucose-insulin-heading { align-items:center; display:flex; justify-content:space-between; }
+.glucose-insulin-heading > p { color:#A99BCB; font-size:.8rem; font-weight:700; margin:0; }
+.glucose-insulin-empty { margin:8px 0 0; }
 .glucose-insulin-context-line { align-items:center; color:inherit; display:flex; gap:12px; justify-content:space-between; padding:9px 0; text-decoration:none; }
 .glucose-insulin-context-line + .glucose-insulin-context-line { border-top:1px solid #39322e; }
 .glucose-insulin-context-line div { display:grid; gap:3px; min-width:0; }
@@ -160,4 +160,6 @@ select.field { text-overflow: ellipsis; }
 .suggestions li { cursor: pointer; padding: 10px 12px; }
 .suggestions li:hover, .suggestions li[aria-selected=true] { background: #342218; }
 @media (max-width: 420px) { .date-fields { grid-template-columns: minmax(0, 1fr); } }
+.symptoms-action { align-items:center; background:#3a2026; border:2px solid var(--quick-symptoms); border-radius:16px; color:#fff0f1; display:flex; gap:10px; justify-content:center; margin-top:22px; min-height:56px; padding:12px; text-decoration:none; }
+.symptoms-action svg { color:var(--quick-symptoms); }
 *{box-sizing:border-box} body{margin:0;background:var(--color-ink);color:#f9f5f1;font-family:Inter,ui-sans-serif,system-ui,sans-serif} button,input,select,textarea{font:inherit} button{cursor:pointer}.shell{max-width:720px;margin:auto;min-height:100dvh;padding:20px 16px calc(84px + env(safe-area-inset-bottom))}.card{background:var(--color-panel);border:1px solid #39322e;border-radius:20px;padding:16px}.field{width:100%;border:1px solid #4d443e;background:#161412;color:white;border-radius:12px;padding:12px;margin-top:6px}.label{display:block;font-size:.86rem;color:var(--color-muted);margin-top:12px}.primary{background:var(--color-copper);color:#21120a;border:0;border-radius:14px;padding:13px 16px;font-weight:700}.secondary{background:transparent;color:#f9f5f1;border:1px solid #574c46;border-radius:14px;padding:12px 14px}.nav{position:fixed;bottom:0;left:0;right:0;background:#181513f2;border-top:1px solid #39322e;display:flex;justify-content:center;gap:0;padding-bottom:env(safe-area-inset-bottom);backdrop-filter:blur(12px)}.nav a{color:#b9afa8;text-decoration:none;padding:12px 6px 15px;text-align:center;font-size:.75rem}.nav a.active{color:var(--color-copper)}.quick{display:grid;grid-template-columns:1fr 1fr;gap:10px}.quick a{min-height:82px;text-decoration:none;color:#f9f5f1;background:var(--color-panel);border:2px solid #39322e;border-radius:16px;padding:13px}.quick a.quick-glucose,.quick a.quick-symptoms{grid-column:span 2}.timeline{border-left:1px solid #51473f;margin-left:8px;padding-left:18px}.item{position:relative;padding:0 0 16px}.item:before{content:'';position:absolute;width:9px;height:9px;border-radius:50%;background:var(--color-copper);left:-23px;top:6px}.muted{color:var(--color-muted);font-size:.9rem}.row{display:flex;align-items:center;justify-content:space-between;gap:12px}.danger{color:#ffb5a7;background:none;border:0;padding:8px}@media(min-width:720px){.shell{padding-top:36px}}

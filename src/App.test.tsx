@@ -64,19 +64,18 @@ describe('onboarding', () => {
     expect(screen.queryByText('Insulina basal — lembrete')).toBeNull()
   })
 
-  it('organiza as seis ações rápidas e abre o cadastro de consulta existente', async () => {
+  it('integra as ações de registro aos cartões da Home', async () => {
     await db.profiles.put({ id: 'local', name: 'Lia', createdAt: now(), updatedAt: now() })
     renderApp()
-    const quick = (await screen.findByRole('link', { name: /Registrar glicemia/ })).parentElement!
-    expect(quick.children).toHaveLength(6)
-    expect(quick.children[0].className).toContain('quick-glucose')
-    expect(screen.getByRole('link', { name: /Registrar refeição/ }).className).toContain('quick-meal')
-    expect(screen.getByRole('link', { name: /Registrar insulina/ }).className).toContain('quick-insulin')
-    expect(screen.getByRole('link', { name: /Registrar treino/ }).className).toContain('quick-workout')
+    expect((await screen.findByRole('link', { name: 'Registrar glicemia' })).className).toContain('home-add-glucose')
+    expect(screen.getByRole('link', { name: 'Registrar refeição' }).className).toContain('home-add-meal')
+    expect(screen.getByRole('link', { name: 'Registrar insulina' }).className).toContain('home-add-insulin')
+    expect(screen.getByRole('link', { name: 'Registrar treino' }).className).toContain('home-add-workout')
     const appointment = screen.getByRole('link', { name: /Registrar consulta/ })
     expect(appointment.getAttribute('href')).toBe('/consulta')
-    expect(appointment.className).toContain('quick-appointment')
-    expect(quick.children[5].className).toContain('quick-symptoms')
+    expect(appointment.className).toContain('home-add-appointment')
+    expect(screen.getByRole('link', { name: 'Estou com sintomas' }).className).toContain('symptoms-action')
+    expect(screen.getByText('Nenhuma consulta futura.')).toBeTruthy()
     await userEvent.click(appointment)
     expect(await screen.findByRole('heading', { name: 'Nova consulta' })).toBeTruthy()
   })

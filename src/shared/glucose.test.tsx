@@ -93,7 +93,7 @@ it('mostra as últimas aplicações basal e rápida, incluindo a mais recente po
   expect(screen.getByRole('link', { name: /Basal.*Tresiba/i })).toHaveAttribute('href', `/detalhes/insulin/${later.id}`)
 })
 
-it('exibe somente a aplicação rápida mais recente e oculta o contexto sem aplicações', async () => {
+it('exibe somente a aplicação rápida mais recente e mantém o acesso ao cadastro sem aplicações', async () => {
   const glucose = stamp({ value: 115, at: '2026-10-17T12:00:00.000Z' })
   const rapid = stamp({ kind: 'Rápida' as const, dose: 3, at: '2026-10-17T12:00:00.000Z', medicationName: 'Humalog' })
   await db.glucose.add(glucose); await db.insulin.add(rapid)
@@ -102,7 +102,8 @@ it('exibe somente a aplicação rápida mais recente e oculta o contexto sem apl
   expect(context).toHaveTextContent('Rápida')
   expect(context).not.toHaveTextContent('Basal')
   await db.insulin.delete(rapid.id)
-  await waitFor(() => expect(screen.queryByLabelText('Últimas aplicações registradas')).toBeNull())
+  await waitFor(() => expect(screen.getByLabelText('Últimas aplicações registradas')).toHaveTextContent('Nenhuma aplicação registrada.'))
+  expect(screen.getByRole('link', { name: 'Registrar insulina' })).toHaveAttribute('href', '/insulina')
 })
 
 it('atualiza a última aplicação de cada categoria após alteração de horário', async () => {

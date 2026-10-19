@@ -120,8 +120,9 @@ it('mostra uma única consulta futura ou o estado vazio sem incluir consultas pa
   view.unmount(); await db.appointments.delete(future.id)
   open('/')
   await screen.findByRole('heading', { name: 'Olá, Perfil de teste' })
-  expect(screen.queryByRole('heading', { name: 'Próximas consultas' })).toBeNull()
-  expect(screen.getAllByRole('link', { name: 'Ver histórico' }).find(link => link.getAttribute('href') === '/historico?tipo=appointments')).toBeUndefined()
+  expect(screen.getByRole('heading', { name: 'Próximas consultas' })).toBeInTheDocument()
+  expect(screen.getByText('Nenhuma consulta futura.')).toBeInTheDocument()
+  expect(screen.getAllByRole('link', { name: 'Ver histórico' }).find(link => link.getAttribute('href') === '/historico?tipo=appointments')).toBeTruthy()
 })
 
 it('identifica uma consulta futura no dia atual como Hoje', async () => {
@@ -162,7 +163,7 @@ it('remove automaticamente da Home a consulta que acabou de passar', async () =>
   await screen.findByText('Próximas consultas')
   vi.setSystemTime(new Date(2026, 3, 10, 9, 1))
   await act(async () => { document.dispatchEvent(new Event('visibilitychange')) })
-  expect(screen.queryByRole('heading', { name: 'Próximas consultas' })).toBeNull()
+  expect(screen.getByText('Nenhuma consulta futura.')).toBeInTheDocument()
   expect(await db.appointments.count()).toBe(1)
 })
 
