@@ -17,6 +17,7 @@ const changeDateTime = (value: string) => {
 }
 const save = () => userEvent.click(screen.getByRole('button', { name: 'Salvar registro' }))
 const mealAt = async (value: string, kind = 'Almoço') => { const meal = stamp({ kind, at: iso(value) }); await db.meals.add(meal); return meal }
+const workoutEndedAt = async (value: string) => { const workout = stamp({ activity: 'Caminhada', startedAt: iso('2026-10-14T13:00'), endedAt: iso(value) }); await db.workouts.add(workout); return workout }
 const applied = async (key: string, dose: number, at: string, kind: 'Rápida' | 'Basal/lenta' = 'Rápida') => {
   const record = stamp({ kind, medicationId: key, medicationKey: key, medicationName: key === 'lispro' ? 'Lispro' : 'Glargina U100', dose, at: iso(at) })
   await db.insulin.add(record); return record
@@ -274,6 +275,15 @@ describe('persistência dos formulários', () => {
 })
 
 describe('glicemia contextual', () => {
+  it('sugere o acontecimento concluído mais recente e preserva o contexto escolhido manualmente', async () => {
+    await mealAt('2026-10-14T15:00'); await workoutEndedAt('2026-10-14T14:00')
+    open('/glicemia'); changeDateTime('2026-10-14T16:00')
+    await waitFor(() => expect(screen.getByLabelText('Contexto')).toHaveValue('Após refeição'))
+    await workoutEndedAt('2026-10-14T15:30')
+    await waitFor(() => expect(screen.getByLabelText('Contexto')).toHaveValue('Após treino'))
+    change('Contexto', 'Jejum'); change('Hora', '17:00')
+    expect(screen.getByLabelText('Contexto')).toHaveValue('Jejum')
+  })
   it('pré-seleciona após refeição e associa somente a mais recente confirmada', async () => {
     await mealAt('2026-10-14T11:00', 'Lanche'); const latest = await mealAt('2026-10-14T12:00')
     open('/glicemia'); changeDateTime('2026-10-14T13:00')

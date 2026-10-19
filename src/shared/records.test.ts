@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activitySuggestions, insulinCatalog, mealAssociationOptions, medicationIdentity, parseActivities, previousInsulin, recentMeal, suggestedMealKind } from './records'
+import { activitySuggestions, glucoseContextSuggestion, insulinCatalog, mealAssociationOptions, medicationIdentity, parseActivities, previousInsulin, recentMeal, suggestedMealKind } from './records'
 import { stamp } from '../database/db'
 import { duration, iso, localInput } from './format'
 
@@ -28,6 +28,14 @@ describe('regras locais', () => {
     expect(recentMeal(meals, '2026-10-14T15:00')?.kind).toBe('Almoço')
     expect(recentMeal(meals, '2026-10-14T15:01')).toBeUndefined()
     expect(meals).toEqual(copy)
+  })
+  it('sugere o acontecimento mais recente pelo horário efetivo', () => {
+    const meal = stamp({ kind: 'Almoço', at: iso('2026-10-14T15:00') })
+    const workout = stamp({ activity: 'Caminhada', startedAt: iso('2026-10-14T13:00'), endedAt: iso('2026-10-14T14:00') })
+    expect(glucoseContextSuggestion([meal], [workout], '2026-10-14T16:00')).toBe('Após refeição')
+    expect(glucoseContextSuggestion([meal], [{ ...workout, endedAt: iso('2026-10-14T15:30') }], '2026-10-14T16:00')).toBe('Após treino')
+    expect(glucoseContextSuggestion([], [{ ...workout, endedAt: undefined }], '2026-10-14T16:00')).toBeUndefined()
+    expect(glucoseContextSuggestion([], [workout], '2026-10-14T17:01')).toBeUndefined()
   })
   it('limita associações às três refeições anteriores e preserva somente o vínculo em edição', () => {
     const meals = [8, 9, 10, 11, 14].map(hour => stamp({ kind: `Refeição ${hour}`, at: iso(`2026-10-14T${String(hour).padStart(2, '0')}:00`) }))

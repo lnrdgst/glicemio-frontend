@@ -1,4 +1,4 @@
-import type { Insulin, Meal } from '../database/db'
+import type { Insulin, Meal, Workout } from '../database/db'
 
 export const cleanName = (value: string) => value.trim().replace(/\s+/g, ' ')
 export const normalizedName = (value: string) => cleanName(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR')
@@ -24,6 +24,21 @@ export function recentMeal(meals: Meal[], at: string) {
   const measured = new Date(at).getTime()
   return meals.filter(meal => { const elapsed = measured - new Date(meal.at).getTime(); return elapsed >= 0 && elapsed <= 3 * 60 * 60 * 1000 })
     .sort((a, b) => +new Date(b.at) - +new Date(a.at))[0]
+}
+export function glucoseContextSuggestion(meals: Meal[], workouts: Workout[], at: string): 'Após refeição' | 'Após treino' | undefined {
+  const measured = new Date(at).getTime()
+  if (!Number.isFinite(measured)) return undefined
+  const meal = recentMeal(meals, at)
+  const workout = workouts
+    .filter(item => {
+      if (!item.endedAt) return false
+      const elapsed = measured - new Date(item.endedAt).getTime()
+      return elapsed >= 0 && elapsed <= 3 * 60 * 60 * 1000
+    })
+    .sort((a, b) => +new Date(b.endedAt!) - +new Date(a.endedAt!))[0]
+  if (!meal) return workout ? 'Após treino' : undefined
+  if (!workout) return 'Após refeição'
+  return new Date(meal.at).getTime() >= new Date(workout.endedAt!).getTime() ? 'Após refeição' : 'Após treino'
 }
 export function mealAssociationOptions(meals: Meal[], at: string, preservedMealId?: string) {
   const atTime = new Date(at).getTime()
