@@ -76,6 +76,14 @@ select.field { text-overflow: ellipsis; }
 .details { display:grid; gap:16px; }
 .details-heading { border-bottom:1px solid #39322e; padding-bottom:10px; text-align:center; }
 .details-heading h1 { font-size:1.2rem; margin:0; }
+.details-glicemia { --details-category-color:var(--quick-glucose); }
+.details-refeicao { --details-category-color:var(--quick-meal); }
+.details-insulina { --details-category-color:var(--quick-insulin); }
+.details-treino { --details-category-color:var(--quick-workout); }
+.details-consulta { --details-category-color:var(--quick-appointment); }
+.details-episodio { --details-category-color:var(--form-symptoms); }
+.details-title { color:var(--details-category-color); }
+.details .primary.details-edit { background:var(--details-category-color); color:#21120a; }
 .details-content { display:grid; gap:10px; }
 .details-content p { margin:0; }
 .details-primary { color:#f9f5f1; font-size:1.1rem; font-weight:600; }

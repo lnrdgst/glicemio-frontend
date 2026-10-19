@@ -15,7 +15,7 @@ const changeDateTime = (value: string) => {
   const [date = '', time = ''] = value.split('T')
   change('Data', date); change('Hora', time)
 }
-const save = () => userEvent.click(screen.getByRole('button', { name: 'Salvar registro' }))
+const save = () => userEvent.click(screen.getByRole('button', { name: /Salvar registro de/ }))
 const mealAt = async (value: string, kind = 'Almoço') => { const meal = stamp({ kind, at: iso(value) }); await db.meals.add(meal); return meal }
 const workoutEndedAt = async (value: string) => { const workout = stamp({ activity: 'Caminhada', startedAt: iso('2026-10-14T13:00'), endedAt: iso(value) }); await db.workouts.add(workout); return workout }
 const applied = async (key: string, dose: number, at: string, kind: 'Rápida' | 'Basal/lenta' = 'Rápida') => {
@@ -47,7 +47,7 @@ describe('data e hora nativas separadas', () => {
   ])('aplica a categoria visual em %s', async (kind, title, titleClass, saveClass) => {
     open(`/${kind}`)
     expect(await screen.findByRole('heading', { name: title })).toHaveClass(titleClass)
-    expect(screen.getByRole('button', { name: 'Salvar registro' })).toHaveClass('primary', 'form-save', saveClass)
+    expect(screen.getByRole('button', { name: /Salvar registro de/ })).toHaveClass('primary', 'form-save', saveClass)
   })
 
   it.each(['refeicao', 'glicemia', 'insulina'])('inicializa %s com a data e a hora locais atuais', kind => {
@@ -68,12 +68,12 @@ describe('data e hora nativas separadas', () => {
     expect(time).toHaveAttribute('type', 'time'); expect(time).toHaveValue(''); expect(time).toBeRequired()
     expect(document.querySelector('input[type="datetime-local"]')).toBeNull()
 
-    fireEvent.submit(screen.getByRole('button', { name: 'Salvar registro' }).closest('form')!)
+    fireEvent.submit(screen.getByRole('button', { name: /Salvar registro de/ }).closest('form')!)
     expect(await screen.findByRole('alert')).toHaveTextContent('Informe a data da consulta.')
     expect(await db.appointments.count()).toBe(0)
 
     change('Data', '2026-10-11')
-    fireEvent.submit(screen.getByRole('button', { name: 'Salvar registro' }).closest('form')!)
+    fireEvent.submit(screen.getByRole('button', { name: /Salvar registro de/ }).closest('form')!)
     expect(await screen.findByRole('alert')).toHaveTextContent('Informe o horário da consulta.')
     expect(await db.appointments.count()).toBe(0)
   })
@@ -146,7 +146,7 @@ describe('data e hora nativas separadas', () => {
     expect(input.validity.valueMissing).toBe(true)
     expect(screen.getByLabelText(label === 'Data' ? 'Hora' : 'Data')).toHaveValue(label === 'Data' ? '21:45' : '2026-10-11')
     await save(); expect(await db.meals.count()).toBe(0)
-    fireEvent.submit(screen.getByRole('button', { name: 'Salvar registro' }).closest('form')!)
+    fireEvent.submit(screen.getByRole('button', { name: /Salvar registro de/ }).closest('form')!)
     expect(await screen.findByRole('alert')).toHaveTextContent('data e um horário válidos')
     expect(await db.meals.count()).toBe(0)
   })
@@ -173,7 +173,7 @@ describe('campos numéricos', () => {
     for (const invalid of ['', '71+2', '71.5', 'setenta']) {
       change('Valor (mg/dL)', invalid)
       expect(invalid ? input.validity.patternMismatch : input.validity.valueMissing).toBe(true)
-      fireEvent.submit(screen.getByRole('button', { name: 'Salvar registro' }).closest('form')!)
+      fireEvent.submit(screen.getByRole('button', { name: /Salvar registro de/ }).closest('form')!)
       expect(await screen.findByRole('alert')).toHaveTextContent('glicemia inteira maior que zero')
     }
     expect(await db.glucose.count()).toBe(0)
@@ -194,7 +194,7 @@ describe('campos numéricos', () => {
 
     change('Dose (UI)', '4+5')
     expect(input.validity.patternMismatch).toBe(true)
-    fireEvent.submit(screen.getByRole('button', { name: 'Salvar registro' }).closest('form')!)
+    fireEvent.submit(screen.getByRole('button', { name: /Salvar registro de/ }).closest('form')!)
     expect(await screen.findByRole('alert')).toHaveTextContent('dose válida maior que zero')
     expect(await db.insulin.count()).toBe(0)
 
@@ -255,7 +255,7 @@ describe('persistência dos formulários', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar')
     expect(screen.queryByRole('status')).toBeNull()
     expect(await db.table(table).count()).toBe(0)
-    expect(screen.getByRole('button', { name: 'Salvar registro' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /Salvar registro de/ })).toBeEnabled()
     await save(); expect(await screen.findByRole('status')).toHaveTextContent('Registro salvo')
     expect(spy).toHaveBeenCalledTimes(2)
   })
@@ -264,7 +264,7 @@ describe('persistência dos formulários', () => {
     const original = db.meals.add.bind(db.meals)
     const spy = vi.spyOn(db.meals, 'add').mockImplementation(record => new Dexie.Promise<void>(resolve => { release = resolve }).then(() => original(record)))
     open('/refeicao'); await fill('refeicao')
-    const form = screen.getByRole('button', { name: 'Salvar registro' }).closest('form')!
+    const form = screen.getByRole('button', { name: /Salvar registro de/ }).closest('form')!
     fireEvent.submit(form); fireEvent.submit(form)
     expect(spy).toHaveBeenCalledTimes(1); expect(screen.queryByRole('status')).toBeNull()
     expect(screen.getByRole('button', { name: 'Salvando…' })).toBeDisabled()
@@ -280,7 +280,7 @@ describe('persistência dos formulários', () => {
   })
   it('apresenta erro de data inválida sem salvar nem navegar', async () => {
     open('/glicemia'); await fill('glicemia'); changeDateTime('')
-    fireEvent.submit(screen.getByRole('button', { name: 'Salvar registro' }).closest('form')!)
+    fireEvent.submit(screen.getByRole('button', { name: /Salvar registro de/ }).closest('form')!)
     expect(await screen.findByRole('alert')).toHaveTextContent('data e um horário válidos')
     expect(await db.glucose.count()).toBe(0)
   })
@@ -386,7 +386,7 @@ describe('insulina', () => {
     expect(screen.getByLabelText('Dose (UI)')).toHaveValue('4')
     expect(screen.getByLabelText(/Confirmo que esta dose/)).not.toBeChecked()
     expect(screen.getByLabelText('Data')).toHaveValue(newDate); expect(screen.getByLabelText('Hora')).toHaveValue(newTime)
-    fireEvent.submit(screen.getByRole('button', { name: 'Salvar registro' }).closest('form')!)
+    fireEvent.submit(screen.getByRole('button', { name: /Salvar registro de/ }).closest('form')!)
     expect(await screen.findByRole('alert')).toHaveTextContent('Confirme')
     expect(await db.insulin.count()).toBe(3)
     change('Dose (UI)', '5'); await userEvent.click(screen.getByLabelText(/Confirmo que esta dose/)); await save(); await screen.findByRole('status')
@@ -443,7 +443,7 @@ describe('insulina', () => {
     const editSelect = await screen.findByLabelText('Associar a uma refeição (opcional)')
     await waitFor(() => expect(editSelect).toHaveValue(oldest.id))
     expect(within(editSelect).getAllByRole('option').map(option => option.getAttribute('value'))).toEqual(['', newest.id, third.id, second.id, oldest.id])
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+    await userEvent.click(screen.getByRole('button', { name: /Salvar alterações (da|do)/ }))
     expect(await db.insulin.get(insulin.id)).toMatchObject({ mealId: oldest.id, dose: 4 })
   })
   it('mostra nomes, doses e horários reais independentes na Home', async () => {
@@ -461,7 +461,7 @@ describe('treino', () => {
     open('/treino'); expect(screen.getByLabelText('Data de início')).toHaveValue(localInput().slice(0, 10)); expect(screen.getByLabelText('Data de término')).toHaveValue(localInput().slice(0, 10))
     expect(screen.getByLabelText('Hora de início')).toHaveValue(''); expect(screen.getByLabelText('Hora de término (opcional)')).toHaveValue('')
     change('Atividade', 'Caminhada'); await save(); expect(await db.workouts.count()).toBe(0)
-    fireEvent.submit(screen.getByRole('button', { name: 'Salvar registro' }).closest('form')!)
+    fireEvent.submit(screen.getByRole('button', { name: /Salvar registro de/ }).closest('form')!)
     expect(await screen.findByRole('alert')).toHaveTextContent('horário válidos')
   })
   it('mostra sugestões ao focar, normaliza equivalências e aceita nova atividade', async () => {

@@ -12,9 +12,9 @@ const open = (route: string) => render(<MemoryRouter initialEntries={[route]}><A
 const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
 const edit = async () => {
   await userEvent.click(await screen.findByRole('link', { name: 'Editar' }))
-  await screen.findByRole('button', { name: 'Salvar alterações' })
+  await screen.findByRole('button', { name: /Salvar alterações (da|do|dos)/ })
 }
-const save = () => userEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+const save = () => userEvent.click(screen.getByRole('button', { name: /Salvar alterações (da|do|dos)/ }))
 
 beforeEach(async () => {
   await Promise.all(db.tables.map(table => table.clear()))
@@ -35,7 +35,7 @@ it('edita glicemia pelo Histórico preservando UUID, criação e vínculo seleci
 })
 
 it('retorna à Home após cadastrar um registro novo', async () => {
-  open('/glicemia'); change('Valor (mg/dL)', '123'); await userEvent.click(screen.getByRole('button', { name: 'Salvar registro' }))
+  open('/glicemia'); change('Valor (mg/dL)', '123'); await userEvent.click(screen.getByRole('button', { name: /Salvar registro de/ }))
   expect(await screen.findByRole('heading', { name: 'Olá, Teste' })).toBeInTheDocument()
   expect(screen.getByRole('status')).toHaveTextContent('Registro salvo neste dispositivo.')
   expect((await db.glucose.toArray())[0]).toMatchObject({ value: 123 })
