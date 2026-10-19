@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @theme { --color-ink:#11100f; --color-panel:#201d1b; --color-panel2:#2a2623; --color-copper:#d7865b; --color-muted:#b9afa8; }
-:root { --quick-glucose:#D98A60; --quick-meal:#C989A2; --quick-insulin:#A99BCB; --quick-workout:#71AFA5; --quick-appointment:#BDB5B0; --quick-symptoms:#A65B67; --form-symptoms:#C77D8A; }
+:root { --quick-glucose:#D98A60; --quick-meal:#C989A2; --quick-insulin:#A99BCB; --quick-workout:#71AFA5; --quick-appointment:#BDB5B0; --quick-symptoms:#A65B67; }
 html { min-width: 0; }
 fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 button:disabled { cursor: wait; opacity: .65; }
@@ -20,7 +20,7 @@ select.field { text-overflow: ellipsis; }
 .form-title-insulina, .form-save-insulina { --form-category-color:var(--quick-insulin); }
 .form-title-treino, .form-save-treino { --form-category-color:var(--quick-workout); }
 .form-title-consulta, .form-save-consulta { --form-category-color:var(--quick-appointment); }
-.form-title-episodio, .form-save-episodio { --form-category-color:var(--form-symptoms); }
+.form-title-episodio, .form-save-episodio { --form-category-color:var(--quick-symptoms); }
 .form-title-glicemia, .form-title-refeicao, .form-title-insulina, .form-title-treino, .form-title-consulta, .form-title-episodio { color:var(--form-category-color); }
 .form-save:hover:not(:disabled) { filter:brightness(1.06); }
 .form-save:active:not(:disabled) { filter:brightness(.9); }
@@ -81,7 +81,7 @@ select.field { text-overflow: ellipsis; }
 .details-insulina { --details-category-color:var(--quick-insulin); }
 .details-treino { --details-category-color:var(--quick-workout); }
 .details-consulta { --details-category-color:var(--quick-appointment); }
-.details-episodio { --details-category-color:var(--form-symptoms); }
+.details-episodio { --details-category-color:var(--quick-symptoms); }
 .details-title { color:var(--details-category-color); }
 .details .primary.details-edit { background:var(--details-category-color); color:#21120a; }
 .details-content { display:grid; gap:10px; }

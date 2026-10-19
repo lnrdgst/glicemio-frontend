@@ -66,10 +66,10 @@ it('mantém a preferência rápida independente e preserva aplicações históri
 })
 
 it('registra, edita e encerra um episódio sem perder vínculos de glicemia', async () => {
-  open('/episodio'); expect(await screen.findByRole('heading', { name: 'Registrar sintomas' })).toHaveClass('form-title-episodio'); expect(screen.getByRole('button', { name: 'Salvar registro de sintomas' })).toHaveClass('form-save-episodio'); await userEvent.click(screen.getByLabelText('Tremor')); await userEvent.click(screen.getByRole('button', { name: 'Salvar registro de sintomas' }))
+  open('/episodio'); expect(await screen.findByRole('heading', { name: 'Registrar sintomas' })).toHaveClass('form-title-episodio'); expect(screen.getByRole('button', { name: 'Relatar sintoma' })).toHaveClass('form-save-episodio'); await userEvent.click(screen.getByLabelText('Tremor')); await userEvent.click(screen.getByRole('button', { name: 'Relatar sintoma' }))
   await screen.findByRole('heading', { name: 'Acompanhando sintomas' })
   const episode = (await db.episodes.toArray())[0]
-  await userEvent.click(screen.getByLabelText('Tremor')); await userEvent.click(screen.getByLabelText('Suor')); await userEvent.click(screen.getByRole('button', { name: 'Salvar registro de sintomas' }))
+  await userEvent.click(screen.getByLabelText('Tremor')); await userEvent.click(screen.getByLabelText('Suor')); await userEvent.click(screen.getByRole('button', { name: 'Relatar sintoma' }))
   await waitFor(async () => expect((await db.episodes.get(episode.id))?.symptoms).toEqual(['Suor']))
   await userEvent.click(screen.getByRole('link', { name: 'Registrar glicemia' }))
   fireEvent.change(screen.getByLabelText('Valor (mg/dL)'), { target: { value: '100' } }); await userEvent.click(screen.getByRole('button', { name: /Salvar registro de/ }))
