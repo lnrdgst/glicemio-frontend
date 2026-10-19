@@ -25,7 +25,7 @@ const applied = async (key: string, dose: number, at: string, kind: 'Rápida' | 
 const fill = async (kind: string) => {
   if (kind === 'glicemia') change('Valor (mg/dL)', '123')
   if (kind === 'refeicao') change('Tipo de refeição', 'Almoço')
-  if (kind === 'insulina') change('Dose (UI)', '4.5')
+  if (kind === 'insulina') { change('Dose (UI)', '4.5'); await userEvent.click(screen.getByLabelText(/Confirmo que esta dose corresponde/)) }
   if (kind === 'treino') { change('Atividade', 'Caminhada'); change('Hora de início', '23:30') }
 }
 
@@ -199,7 +199,9 @@ describe('campos numéricos', () => {
     expect(await db.insulin.count()).toBe(0)
 
     change('Dose (UI)', '4,25')
-    expect(screen.queryByLabelText(/Confirmo que apliquei esta dose/)).toBeNull()
+    expect(screen.getByRole('button', { name: /Salvar registro de/ })).toBeDisabled()
+    expect(screen.getByRole('status')).toHaveTextContent('confirme que a dose corresponde')
+    await userEvent.click(screen.getByLabelText(/Confirmo que esta dose corresponde/))
     await save()
     expect(await screen.findByRole('status')).toHaveTextContent('Registro salvo')
     expect((await db.insulin.toArray())[0]?.dose).toBe(4.25)
@@ -375,7 +377,7 @@ describe('insulina', () => {
     await fill('insulina'); await save(); await screen.findByRole('status')
     expect((await db.insulin.toArray())[0]).toMatchObject({ medicationId: 'other', medicationName: 'Marca Pessoal', medicationKey: 'other:marca pessoal' })
   })
-  it('recupera a última dose da mesma insulina por horário efetivo e exige confirmação somente para o valor copiado', async () => {
+  it('recupera a última dose da mesma insulina por horário efetivo e exige confirmação antes de salvar', async () => {
     const old = await applied('lispro', 2, '2026-10-12T12:00')
     const latest = await applied('lispro', 4, '2026-10-13T12:00')
     await db.insulin.update(old.id, { createdAt: '2026-10-14T22:00:00.000Z' })
@@ -384,20 +386,21 @@ describe('insulina', () => {
     change('Insulina utilizada (opcional)', 'lispro')
     await userEvent.click(await screen.findByRole('button', { name: 'Preencher com dose anterior' }))
     expect(screen.getByLabelText('Dose (UI)')).toHaveValue('4')
-    expect(screen.getByLabelText('Confirmo que apliquei esta dose.')).not.toBeChecked()
+    expect(screen.getByLabelText('Confirmo que esta dose corresponde à quantidade efetivamente aplicada.')).not.toBeChecked()
     expect(screen.getByLabelText('Data')).toHaveValue(newDate); expect(screen.getByLabelText('Hora')).toHaveValue(newTime)
+    expect(screen.getByRole('button', { name: /Salvar registro de/ })).toBeDisabled()
     fireEvent.submit(screen.getByRole('button', { name: /Salvar registro de/ }).closest('form')!)
-    expect(await screen.findByRole('alert')).toHaveTextContent('Confirme que você aplicou esta dose preenchida pelo histórico.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Confirme que esta dose corresponde à quantidade efetivamente aplicada.')
     expect(await db.insulin.count()).toBe(3)
-    change('Dose (UI)', '5'); expect(screen.queryByLabelText('Confirmo que apliquei esta dose.')).toBeNull(); await save(); await screen.findByRole('status')
+    await userEvent.click(screen.getByLabelText(/Confirmo que esta dose corresponde/)); change('Dose (UI)', '5'); expect(screen.getByLabelText(/Confirmo que esta dose corresponde/)).not.toBeChecked(); await userEvent.click(screen.getByLabelText(/Confirmo que esta dose corresponde/)); await save(); await screen.findByRole('status')
     expect(await db.insulin.get(latest.id)).toEqual(latest)
     expect((await db.insulin.toArray()).find(x => x.dose === 5)?.medicationKey).toBe('lispro')
   })
-  it('limpa dose copiada e confirmação ao trocar de medicamento sem histórico', async () => {
+  it('limpa dose e confirmação ao trocar de medicamento sem histórico', async () => {
     await applied('lispro', 4, '2026-10-13T12:00'); open('/insulina'); change('Insulina utilizada (opcional)', 'lispro')
     await userEvent.click(await screen.findByRole('button', { name: 'Preencher com dose anterior' }))
-    await userEvent.click(screen.getByLabelText('Confirmo que apliquei esta dose.')); change('Insulina utilizada (opcional)', 'aspart')
-    expect(screen.getByLabelText('Dose (UI)')).toHaveValue(''); expect(screen.queryByLabelText('Confirmo que apliquei esta dose.')).toBeNull()
+    await userEvent.click(screen.getByLabelText(/Confirmo que esta dose corresponde/)); change('Insulina utilizada (opcional)', 'aspart')
+    expect(screen.getByLabelText('Dose (UI)')).toHaveValue(''); expect(screen.getByLabelText(/Confirmo que esta dose corresponde/)).not.toBeChecked()
     expect(screen.queryByRole('button', { name: 'Preencher com dose anterior' })).toBeNull()
   })
   it('permite associação opcional da rápida e remove a pendente ao mudar para basal', async () => {

@@ -52,7 +52,7 @@ it('edita refeição, treino e consulta sem criar duplicatas', async () => {
 it('corrige somente o horário de uma insulina preservando dose, medicamento e identificador', async () => {
   const record = stamp({ kind: 'Basal/lenta' as const, dose: 18, at: iso('2026-10-14T09:00'), medicationId: 'glargine-u100', medicationName: 'Glargina U100', medicationKey: 'glargine-u100', note: 'Noite' })
   await db.insulin.add(record); open('/detalhes/insulin/' + record.id); await edit()
-  change('Hora', '21:00'); await save()
+  change('Hora', '21:00'); await userEvent.click(screen.getByLabelText(/Confirmo que esta dose corresponde/)); await save()
   expect(await db.insulin.get(record.id)).toEqual(expect.objectContaining({ id: record.id, createdAt: record.createdAt, dose: 18, medicationId: 'glargine-u100', medicationName: 'Glargina U100', medicationKey: 'glargine-u100', note: 'Noite', at: iso('2026-10-14T21:00') }))
   expect(await db.insulin.count()).toBe(1)
 })
@@ -76,7 +76,7 @@ it('mostra somente a categoria existente na Home e preserva a outra ao editar', 
   const basal = stamp({ kind: 'Basal/lenta' as const, dose: 18, at: iso('2026-10-14T21:00') }); await db.insulin.add(basal)
   await db.glucose.add(stamp({ value: 115, at: iso('2026-10-14T22:00') }))
   open('/'); expect(await screen.findByText('18 UI')).toBeInTheDocument(); expect(screen.queryByText('Rápida')).toBeNull()
-  cleanup(); open('/detalhes/insulin/' + basal.id); await edit(); change('Hora', '22:00'); await save(); expect((await db.insulin.get(basal.id))?.dose).toBe(18)
+  cleanup(); open('/detalhes/insulin/' + basal.id); await edit(); change('Hora', '22:00'); await userEvent.click(screen.getByLabelText(/Confirmo que esta dose corresponde/)); await save(); expect((await db.insulin.get(basal.id))?.dose).toBe(18)
 })
 
 it('mantém dados preenchidos quando a atualização falha', async () => {
