@@ -14,7 +14,7 @@ select.field { text-overflow: ellipsis; }
 .nav a svg { flex-shrink: 0; }
 .home-record { display:block; color:inherit; text-decoration:none; margin:0; }
 .form-title { font-size:1.35rem; font-weight:600; margin:16px 0 18px; text-align:center; }
-.form-save { background:var(--form-category-color); color:#21120a; }
+.primary.form-save { background:var(--form-category-color); color:#21120a; }
 .form-title-glicemia, .form-save-glicemia { --form-category-color:var(--quick-glucose); }
 .form-title-refeicao, .form-save-refeicao { --form-category-color:var(--quick-meal); }
 .form-title-insulina, .form-save-insulina { --form-category-color:var(--quick-insulin); }
