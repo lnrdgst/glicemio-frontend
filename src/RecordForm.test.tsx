@@ -38,6 +38,18 @@ beforeEach(async () => {
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('data e hora nativas separadas', () => {
+  it.each([
+    ['glicemia', 'Registrar glicemia', 'form-title-glicemia', 'form-save-glicemia'],
+    ['refeicao', 'Registrar refeição', 'form-title-refeicao', 'form-save-refeicao'],
+    ['insulina', 'Registrar insulina', 'form-title-insulina', 'form-save-insulina'],
+    ['treino', 'Registrar treino', 'form-title-treino', 'form-save-treino'],
+    ['consulta', 'Nova consulta', 'form-title-consulta', 'form-save-consulta'],
+  ])('aplica a categoria visual em %s', async (kind, title, titleClass, saveClass) => {
+    open(`/${kind}`)
+    expect(await screen.findByRole('heading', { name: title })).toHaveClass(titleClass)
+    expect(screen.getByRole('button', { name: 'Salvar registro' })).toHaveClass('primary', 'form-save', saveClass)
+  })
+
   it.each(['refeicao', 'glicemia', 'insulina'])('inicializa %s com a data e a hora locais atuais', kind => {
     vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-10-14T15:20:00.000Z'))
     const current = localInput().split('T')

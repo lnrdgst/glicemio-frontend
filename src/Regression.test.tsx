@@ -66,7 +66,7 @@ it('mantém a preferência rápida independente e preserva aplicações históri
 })
 
 it('registra, edita e encerra um episódio sem perder vínculos de glicemia', async () => {
-  open('/episodio'); await userEvent.click(screen.getByLabelText('Tremor')); await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))
+  open('/episodio'); expect(await screen.findByRole('heading', { name: 'Registrar sintomas' })).toHaveClass('form-title-episodio'); expect(screen.getByRole('button', { name: 'Salvar' })).toHaveClass('form-save-episodio'); await userEvent.click(screen.getByLabelText('Tremor')); await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))
   await screen.findByRole('heading', { name: 'Acompanhando sintomas' })
   const episode = (await db.episodes.toArray())[0]
   await userEvent.click(screen.getByLabelText('Tremor')); await userEvent.click(screen.getByLabelText('Suor')); await userEvent.click(screen.getByRole('button', { name: 'Salvar' }))

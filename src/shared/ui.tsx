@@ -2,7 +2,7 @@ import { useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'rea
 import { NavLink } from 'react-router-dom'
 import { Activity, CalendarDays, ChartNoAxesCombined, MoreHorizontal, type LucideIcon } from 'lucide-react'
 
-export const Button = ({ children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) => <button className="primary" {...props}>{children}</button>
+export const Button = ({ children, className, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) => <button className={['primary', className].filter(Boolean).join(' ')} {...props}>{children}</button>
 export const scrollToTop = () => window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
 export function Layout({ children, onBeforeNavigate }: { children: ReactNode; onBeforeNavigate?: () => boolean }) {
   const links: [string, LucideIcon, string][] = [['/', Activity, 'Início'], ['/historico', CalendarDays, 'Histórico'], ['/relatorio', ChartNoAxesCombined, 'Relatório'], ['/mais', MoreHorizontal, 'Ajustes']]
