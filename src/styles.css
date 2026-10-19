@@ -24,14 +24,16 @@ select.field { text-overflow: ellipsis; }
 .home-card-heading { border-bottom:1px solid #39322e; margin-bottom:10px; padding:0 50px 10px; position:relative; text-align:center; }
 .home-card-heading h2 { font-size:1.1rem; margin:0; }
 .home-list-card { padding-top:14px; }
-.home-add { align-items:center; border:1px solid currentColor; border-radius:50%; display:inline-flex; height:44px; justify-content:center; text-decoration:none; width:44px; }
+.home-add { align-items:center; border:0; border-radius:50%; color:#21120a; display:inline-flex; height:44px; justify-content:center; text-decoration:none; transition:filter .15s ease, transform .15s ease; width:44px; }
+.home-add:hover { filter:brightness(1.06); }
+.home-add:active { filter:brightness(.9); }
 .home-add:focus-visible, .symptoms-action:focus-visible { outline:2px solid #fff; outline-offset:3px; }
 .home-card-heading .home-add { position:absolute; right:0; top:50%; transform:translateY(-50%); }
-.home-add-glucose { color:var(--quick-glucose); }
-.home-add-insulin { color:var(--quick-insulin); }
-.home-add-meal { color:var(--quick-meal); }
-.home-add-workout { color:var(--quick-workout); }
-.home-add-appointment { color:#E7DFDA; }
+.home-add-glucose { background:#D98A60; }
+.home-add-insulin { background:#A99BCB; }
+.home-add-meal { background:#C989A2; }
+.home-add-workout { background:#71AFA5; }
+.home-add-appointment { background:#BDB5B0; }
 .glucose-card-heading { align-items:center; display:flex; justify-content:space-between; min-height:44px; }
 .glucose-card-heading h2 { font-size:1.1rem; margin:0; }
 .glucose-empty-card { margin:0; }
