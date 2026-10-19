@@ -27,9 +27,18 @@ it('edita glicemia pelo Histórico preservando UUID, criação e vínculo seleci
   const meal = stamp({ kind: 'Almoço', at: iso('2026-10-14T12:00') }); await db.meals.add(meal)
   const record = stamp({ value: 110, at: iso('2026-10-14T13:00'), context: 'Após refeição', mealId: meal.id }); await db.glucose.add(record)
   open('/detalhes/glucose/' + record.id); await edit(); change('Valor (mg/dL)', '135'); await save()
+  expect(await screen.findByRole('heading', { name: 'Olá, Teste' })).toBeInTheDocument()
+  expect(screen.getByRole('status')).toHaveTextContent('Alterações salvas neste dispositivo.')
   const updated = await db.glucose.get(record.id)
   expect(updated).toMatchObject({ id: record.id, createdAt: record.createdAt, value: 135, mealId: meal.id })
   expect(updated?.updatedAt).not.toBe(record.updatedAt)
+})
+
+it('retorna à Home após cadastrar um registro novo', async () => {
+  open('/glicemia'); change('Valor (mg/dL)', '123'); await userEvent.click(screen.getByRole('button', { name: 'Salvar registro' }))
+  expect(await screen.findByRole('heading', { name: 'Olá, Teste' })).toBeInTheDocument()
+  expect(screen.getByRole('status')).toHaveTextContent('Registro salvo neste dispositivo.')
+  expect((await db.glucose.toArray())[0]).toMatchObject({ value: 123 })
 })
 
 it('edita refeição, treino e consulta sem criar duplicatas', async () => {

@@ -70,7 +70,7 @@ export function RecordForm({ kind }: { kind: RecordKind }) {
     else { if (attendanceType === 'other' && !attendanceTypeOther.trim()) throw new ValidationError('Informe o tipo de atendimento.'); update = { at: effectiveAt, attendanceType: attendanceType || undefined, attendanceTypeOther: attendanceType === 'other' ? attendanceTypeOther.trim() : undefined, professional: text('professional') || undefined, location: text('location') || undefined, note: text('note') || undefined } }
     const recordTable = (db as any)[table]
     if (existing) await recordTable.put({ ...existing, ...update, updatedAt: now() }); else await recordTable.add(stamp(update))
-    nav(editing ? `/detalhes/${table}/${editId}` : '/', { state: { success: editing ? 'Alterações salvas neste dispositivo.' : 'Registro salvo neste dispositivo.' } })
+    nav('/', { replace: true, state: { success: editing ? 'Alterações salvas neste dispositivo.' : 'Registro salvo neste dispositivo.' } })
   }) }
   const canLeave = () => !dirty || window.confirm('Há alterações não salvas. Deseja sair sem salvar?')
   const leave = (event: React.MouseEvent<HTMLAnchorElement>) => { if (!canLeave()) event.preventDefault() }
