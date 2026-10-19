@@ -141,6 +141,9 @@ select.field { text-overflow: ellipsis; }
 .check { display: flex; align-items: flex-start; gap: 10px; margin-top: 16px; font-size: .9rem; }
 .check input { flex-shrink: 0; margin-top: 4px; }
 .hint { margin-top: 12px; padding: 12px; border: 1px solid #574c46; border-radius: 12px; }
+.insulin-history-dose { display:grid; gap:12px; }
+.insulin-history-dose p { margin:0; }
+.primary.insulin-history-fill { align-items:center; align-self:center; background:var(--quick-insulin); color:#21120a; display:inline-flex; gap:8px; justify-content:center; max-width:100%; }
 .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
 .more-sections { display: grid; gap: 16px; }
 .more-card { display: grid; gap: 16px; }
