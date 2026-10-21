@@ -67,7 +67,6 @@ describe('onboarding', () => {
   it('integra as ações de registro aos cartões da Home', async () => {
     await db.profiles.put({ id: 'local', name: 'Lia', createdAt: now(), updatedAt: now() })
     renderApp()
-    const quickActions = await screen.findByLabelText('Ações rápidas')
     const quickAction = (name: string) => within(quickActions).getByRole('link', { name })
     expect(quickAction('Registrar glicemia').getAttribute('href')).toBe('/glicemia')
     expect(quickAction('Registrar refeição').getAttribute('href')).toBe('/refeicao')

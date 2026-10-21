@@ -30,7 +30,7 @@ function HomeTitle({ tone, children }: { tone: HomeActionTone; children: ReactNo
 }
 
 function QuickActions() {
-  return <section className="quick-actions" aria-labelledby="quick-actions-title"><p id="quick-actions-title">Ações rápidas</p><div className="quick-actions-grid">{homeQuickActions.map(({ label, to, tone, Icon }) => <Link key={tone} to={to} className={`quick-action quick-action-${tone}`} aria-label={label} title={label}><Icon size={21} aria-hidden="true" /></Link>)}</div></section>
+  return <section className="quick-actions" aria-labelledby="quick-actions-title"><p id="quick-actions-title"></p><div className="quick-actions-grid">{homeQuickActions.map(({ label, to, tone, Icon }) => <Link key={tone} to={to} className={`quick-action quick-action-${tone}`} aria-label={label} title={label}><Icon size={21} aria-hidden="true" /></Link>)}</div></section>
 }
 
 const symptoms = ['Tremor', 'Suor', 'Fraqueza', 'Tontura', 'Palpitação', 'Confusão', 'Outro']
