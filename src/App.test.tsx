@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from './App'
@@ -67,11 +67,23 @@ describe('onboarding', () => {
   it('integra as ações de registro aos cartões da Home', async () => {
     await db.profiles.put({ id: 'local', name: 'Lia', createdAt: now(), updatedAt: now() })
     renderApp()
-    expect((await screen.findByRole('link', { name: 'Registrar glicemia' })).className).toContain('home-add-glucose')
-    expect(screen.getByRole('link', { name: 'Registrar refeição' }).className).toContain('home-add-meal')
-    expect(screen.getByRole('link', { name: 'Registrar insulina' }).className).toContain('home-add-insulin')
-    expect(screen.getByRole('link', { name: 'Registrar treino' }).className).toContain('home-add-workout')
-    const appointment = screen.getByRole('link', { name: /Registrar consulta/ })
+    const quickActions = await screen.findByLabelText('Ações rápidas')
+    const quickAction = (name: string) => within(quickActions).getByRole('link', { name })
+    expect(quickAction('Registrar glicemia').getAttribute('href')).toBe('/glicemia')
+    expect(quickAction('Registrar refeição').getAttribute('href')).toBe('/refeicao')
+    expect(quickAction('Registrar insulina').getAttribute('href')).toBe('/insulina')
+    expect(quickAction('Registrar treino').getAttribute('href')).toBe('/treino')
+    expect(quickAction('Registrar consulta').getAttribute('href')).toBe('/consulta')
+    expect(quickAction('Registrar sintomas').getAttribute('href')).toBe('/episodio')
+    const glucose = screen.getAllByRole('link', { name: 'Registrar glicemia' }).find(link => link.classList.contains('home-add-glucose'))!
+    const meal = screen.getAllByRole('link', { name: 'Registrar refeição' }).find(link => link.classList.contains('home-add-meal'))!
+    const insulin = screen.getAllByRole('link', { name: 'Registrar insulina' }).find(link => link.classList.contains('home-add-insulin'))!
+    const workout = screen.getAllByRole('link', { name: 'Registrar treino' }).find(link => link.classList.contains('home-add-workout'))!
+    const appointment = screen.getAllByRole('link', { name: 'Registrar consulta' }).find(link => link.classList.contains('home-add-appointment'))!
+    expect(glucose).toBeTruthy()
+    expect(meal).toBeTruthy()
+    expect(insulin).toBeTruthy()
+    expect(workout).toBeTruthy()
     expect(appointment.getAttribute('href')).toBe('/consulta')
     expect(appointment.className).toContain('home-add-appointment')
     expect(screen.getByRole('link', { name: 'Estou com sintomas' }).className).toContain('symptoms-action')

@@ -33,7 +33,7 @@ it('atualiza o cartão da Home após novo registro e edição sem alterar o regi
   const record = stamp({ value: 65, at: now(), context: 'Jejum' }); await db.glucose.add(record)
   render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
   expect(await screen.findByText('Hipoglicemia nível 1')).toBeInTheDocument()
-  expect(screen.getByText(/^Última medição · Hoje, às/)).toBeInTheDocument()
+  expect(screen.getByText('Última medição')).toBeInTheDocument()
   expect(screen.getByText(/plano individual de tratamento da hipoglicemia/i)).toBeInTheDocument()
   await db.glucose.put({ ...record, value: 115, updatedAt: now() })
   expect(await screen.findByText('Dentro da faixa definida')).toBeInTheDocument()
@@ -103,7 +103,7 @@ it('exibe somente a aplicação rápida mais recente e mantém o acesso ao cadas
   expect(context).not.toHaveTextContent('Basal')
   await db.insulin.delete(rapid.id)
   await waitFor(() => expect(screen.getByLabelText('Últimas aplicações registradas')).toHaveTextContent('Nenhuma aplicação registrada.'))
-  expect(screen.getByRole('link', { name: 'Registrar insulina' })).toHaveAttribute('href', '/insulina')
+  expect(screen.getAllByRole('link', { name: 'Registrar insulina' }).find(link => link.classList.contains('home-add-insulin'))).toHaveAttribute('href', '/insulina')
 })
 
 it('atualiza a última aplicação de cada categoria após alteração de horário', async () => {

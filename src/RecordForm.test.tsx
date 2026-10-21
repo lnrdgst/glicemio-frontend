@@ -242,7 +242,7 @@ describe('persistência dos formulários', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Registro salvo')
     const records = await db.table(table).toArray(); expect(records).toHaveLength(1)
     if (kind === 'glicemia') expect(await screen.findByText('123')).toBeInTheDocument()
-    if (kind === 'insulina') expect(await screen.findByRole('link', { name: /Registrar insulina/ })).toBeInTheDocument()
+    if (kind === 'insulina') expect((await screen.findAllByRole('link', { name: /Registrar insulina/ })).some(link => link.classList.contains('home-add-insulin'))).toBe(true)
     if (kind === 'refeicao') expect(await screen.findByText('Almoço')).toBeInTheDocument()
     if (kind === 'treino') expect(await screen.findByText('Caminhada')).toBeInTheDocument()
     view.unmount()

@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { CalendarDays, Dumbbell, Pencil, Plus, Soup, Syringe, Trash2, TriangleAlert } from 'lucide-react'
+import { CalendarDays, Droplets, Dumbbell, Pencil, Plus, Soup, Stethoscope, Syringe, Trash2, TriangleAlert, Utensils, type LucideIcon } from 'lucide-react'
 import { db, now, stamp, type Appointment, type Insulin, type Meal } from './database/db'
 import { exportBackup, previewBackup, restoreBackup, type ImportPreview, type ProfileStrategy } from './database/backup'
 import { RecordForm, type RecordKind } from './RecordForm'
@@ -12,6 +12,26 @@ import { classifyGlucose, glucoseSummary, hypoglycemiaGuidance } from './shared/
 import { shouldShowBasalReminder } from './shared/basalReminder'
 import { Button, Layout, scrollToTop, usePersistence } from './shared/ui'
 import { appointmentCountdown, appointmentDateTime, dateTime, dayHeading, duration, eventDateTime, localDayKey, time } from './shared/format'
+
+type HomeActionTone = 'glucose' | 'meal' | 'insulin' | 'workout' | 'appointment' | 'symptoms'
+type HomeQuickAction = { label: string; to: string; tone: HomeActionTone; Icon: LucideIcon }
+const homeQuickActions: HomeQuickAction[] = [
+  { label: 'Registrar glicemia', to: '/glicemia', tone: 'glucose', Icon: Droplets },
+  { label: 'Registrar refeição', to: '/refeicao', tone: 'meal', Icon: Utensils },
+  { label: 'Registrar insulina', to: '/insulina', tone: 'insulin', Icon: Syringe },
+  { label: 'Registrar treino', to: '/treino', tone: 'workout', Icon: Dumbbell },
+  { label: 'Registrar consulta', to: '/consulta', tone: 'appointment', Icon: Stethoscope },
+  { label: 'Registrar sintomas', to: '/episodio', tone: 'symptoms', Icon: TriangleAlert },
+]
+
+function HomeTitle({ tone, children }: { tone: HomeActionTone; children: ReactNode }) {
+  const Icon = homeQuickActions.find(action => action.tone === tone)!.Icon
+  return <span className="home-title"><Icon className={`home-title-icon home-title-icon-${tone}`} size={18} aria-hidden="true" /><span>{children}</span></span>
+}
+
+function QuickActions() {
+  return <section className="quick-actions" aria-labelledby="quick-actions-title"><p id="quick-actions-title">Ações rápidas</p><div className="quick-actions-grid">{homeQuickActions.map(({ label, to, tone, Icon }) => <Link key={tone} to={to} className={`quick-action quick-action-${tone}`} aria-label={label} title={label}><Icon size={21} aria-hidden="true" /></Link>)}</div></section>
+}
 
 const symptoms = ['Tremor', 'Suor', 'Fraqueza', 'Tontura', 'Palpitação', 'Confusão', 'Outro']
 const detailsFor: Record<string, { title: string; edit: string }> = {
@@ -50,9 +70,10 @@ function Home() {
   if (profile === undefined) return <main className="shell" />
   if (!profile) return <Navigate to="/onboarding" replace />
   return <Layout>{location.state?.success && <p role="status">{location.state.success}</p>}<header><span style={{ color: '#d7865b', fontWeight: 800, letterSpacing: 2 }}>GLICOPONTO</span><h1 style={{ marginBottom: 4 }}>Olá, {profile.name}</h1>{profile.diagnosis && <p className="muted">{profile.diagnosis}</p>}</header>
+    <QuickActions />
     {imminentAppointment && <ImminentAppointment appointment={imminentAppointment} reference={clock} />}
     <BasalReminder profile={profile} insulin={insulin} now={clock} />
-    {glucose && glucoseState ? <section className="home-section glucose-section"><div className="home-history"><Link to="/historico?tipo=glucose">Ver histórico</Link></div><section className="home-record card glucose-card" style={{ '--glucose-status-color': glucoseState.color } as React.CSSProperties}><div className="glucose-card-heading"><span className="muted">Última medição · {eventDateTime(glucose.at)}</span><AddRecordLink to="/glicemia" label="Registrar glicemia" tone="glucose" /></div><Link className="home-glucose-detail" to={`/detalhes/glucose/${glucose.id}`}><h2 style={{ fontSize: '2.3rem', margin: '6px 0' }}>{glucose.value} <small>mg/dL</small></h2><p className="glucose-status">{glucoseState.label}</p>{glucoseContextLabel && <p className="muted">{glucoseContextLabel}</p>}</Link>{todayGlucose.length >= 2 && dailySummary && <DailyGlucoseSummary count={todayGlucose.length} summary={dailySummary} />}{glucoseGuidance && <p className="glucose-guidance">{glucoseGuidance}</p>}<GlucoseInsulinContext basal={insulinContext?.basal} rapid={insulinContext?.rapid} glucoseAt={glucose.at} /></section></section> : <section className="home-section glucose-section"><div className="home-history"><Link to="/historico?tipo=glucose">Ver histórico</Link></div><section className="card home-record glucose-empty-card"><div className="glucose-card-heading"><h2>Nenhuma medição ainda</h2><AddRecordLink to="/glicemia" label="Registrar glicemia" tone="glucose" /></div><p className="muted">Registre seu primeiro Ponto para acompanhar seu contexto.</p><GlucoseInsulinContext basal={insulinContext?.basal} rapid={insulinContext?.rapid} /></section></section>}
+    {glucose && glucoseState ? <section className="home-section glucose-section"><div className="home-history"><Link to="/historico?tipo=glucose">Ver histórico</Link></div><section className="home-record card glucose-card" style={{ '--glucose-status-color': glucoseState.color } as React.CSSProperties}><div className="glucose-card-heading"><span className="muted"><HomeTitle tone="glucose">Última medição</HomeTitle> · {eventDateTime(glucose.at)}</span><AddRecordLink to="/glicemia" label="Registrar glicemia" tone="glucose" /></div><Link className="home-glucose-detail" to={`/detalhes/glucose/${glucose.id}`}><h2 style={{ fontSize: '2.3rem', margin: '6px 0' }}>{glucose.value} <small>mg/dL</small></h2><p className="glucose-status">{glucoseState.label}</p>{glucoseContextLabel && <p className="muted">{glucoseContextLabel}</p>}</Link>{todayGlucose.length >= 2 && dailySummary && <DailyGlucoseSummary count={todayGlucose.length} summary={dailySummary} />}{glucoseGuidance && <p className="glucose-guidance">{glucoseGuidance}</p>}<GlucoseInsulinContext basal={insulinContext?.basal} rapid={insulinContext?.rapid} glucoseAt={glucose.at} /></section></section> : <section className="home-section glucose-section"><div className="home-history"><Link to="/historico?tipo=glucose">Ver histórico</Link></div><section className="card home-record glucose-empty-card"><div className="glucose-card-heading"><h2><HomeTitle tone="glucose">Nenhuma medição ainda</HomeTitle></h2><AddRecordLink to="/glicemia" label="Registrar glicemia" tone="glucose" /></div><p className="muted">Registre seu primeiro Ponto para acompanhar seu contexto.</p><GlucoseInsulinContext basal={insulinContext?.basal} rapid={insulinContext?.rapid} /></section></section>}
     <Link to="/episodio" className="symptoms-action"><TriangleAlert size={22} aria-hidden="true" /><span>Estou com sintomas</span></Link>
     <HomeAppointments appointments={upcomingAppointments} reference={clock} />
     <HomeList title="Últimas refeições" empty="Nenhuma refeição registrada." items={meals} render={(record: Meal) => <><span>{record.kind}</span><span className="muted">{eventDateTime(record.at)}</span></>} table="meals" filter="meals" createTo="/refeicao" createLabel="Registrar refeição" tone="meal" />
@@ -65,13 +86,13 @@ function DailyGlucoseSummary({ count, summary }: { count: number; summary: NonNu
   return <section className="daily-glucose-summary" aria-label="Resumo glicêmico de hoje"><div className="daily-glucose-heading"><span>Resumo de hoje</span><span>{count} {count === 1 ? 'medição' : 'medições'}</span></div><dl>{indicators.map(([label, value]) => <div key={label as string}><dt>{label}</dt><dd>{value} <small>mg/dL</small></dd></div>)}</dl><p className="muted">A média considera somente as medições registradas hoje.</p></section>
 }
 
-function AddRecordLink({ to, label, tone }: { to: string; label: string; tone: 'glucose' | 'insulin' | 'meal' | 'workout' | 'appointment' }) {
+function AddRecordLink({ to, label, tone }: { to: string; label: string; tone: Exclude<HomeActionTone, 'symptoms'> }) {
   return <Link className={`home-add home-add-${tone}`} to={to} aria-label={label}><Plus size={22} aria-hidden="true" /></Link>
 }
 
 function GlucoseInsulinContext({ basal, rapid, glucoseAt }: { basal?: Insulin; rapid?: Insulin; glucoseAt?: string }) {
   const applications = [{ label: 'Basal', application: basal }, { label: 'Rápida', application: rapid }].filter((item): item is { label: string; application: Insulin } => Boolean(item.application)).sort((first, second) => new Date(second.application.at).getTime() - new Date(first.application.at).getTime())
-  return <section className="glucose-insulin-context" aria-label="Últimas aplicações registradas"><div className="glucose-insulin-heading"><p>Últimas aplicações registradas</p><AddRecordLink to="/insulina" label="Registrar insulina" tone="insulin" /></div>{applications.length ? applications.map(({ label, application }) => <Link className="glucose-insulin-context-line" key={application.id} to={`/detalhes/insulin/${application.id}`}><div><b>{label}</b>{insulinName(application) && <span>{insulinName(application)}</span>}<small>{eventDateTime(application.at)}</small>{glucoseAt && new Date(application.at) > new Date(glucoseAt) && <small className="glucose-insulin-after">Aplicada após a última medição</small>}</div><strong>{application.dose.toLocaleString('pt-BR')} UI</strong></Link>) : <p className="muted glucose-insulin-empty">Nenhuma aplicação registrada.</p>}</section>
+  return <section className="glucose-insulin-context" aria-label="Últimas aplicações registradas"><div className="glucose-insulin-heading"><p><HomeTitle tone="insulin">Últimas aplicações registradas</HomeTitle></p><AddRecordLink to="/insulina" label="Registrar insulina" tone="insulin" /></div>{applications.length ? applications.map(({ label, application }) => <Link className="glucose-insulin-context-line" key={application.id} to={`/detalhes/insulin/${application.id}`}><div><b>{label}</b>{insulinName(application) && <span>{insulinName(application)}</span>}<small>{eventDateTime(application.at)}</small>{glucoseAt && new Date(application.at) > new Date(glucoseAt) && <small className="glucose-insulin-after">Aplicada após a última medição</small>}</div><strong>{application.dose.toLocaleString('pt-BR')} UI</strong></Link>) : <p className="muted glucose-insulin-empty">Nenhuma aplicação registrada.</p>}</section>
 }
 
 function BasalReminder({ profile, insulin, now: current }: { profile: any; insulin: any[]; now: Date }) {
@@ -84,11 +105,11 @@ function BasalReminder({ profile, insulin, now: current }: { profile: any; insul
 }
 
 function HomeList({ title, empty, items, render, table, filter, createTo, createLabel, tone }: { title: string; empty: string; items: any[]; render: (item: any) => React.ReactNode; table: string; filter: string; createTo: string; createLabel: string; tone: 'meal' | 'workout' }) {
-  return <section className="home-section"><div className="home-history"><Link to={`/historico?tipo=${filter}`}>Ver histórico</Link></div><div className="card home-list-card"><div className="home-card-heading"><h2>{title}</h2><AddRecordLink to={createTo} label={createLabel} tone={tone} /></div>{items.length ? items.map(item => <Link className="home-list-item row" key={item.id} to={`/detalhes/${table}/${item.id}`}>{render(item)}</Link>) : <p className="muted">{empty}</p>}</div></section>
+  return <section className="home-section"><div className="home-history"><Link to={`/historico?tipo=${filter}`}>Ver histórico</Link></div><div className="card home-list-card"><div className="home-card-heading"><h2><HomeTitle tone={tone}>{title}</HomeTitle></h2><AddRecordLink to={createTo} label={createLabel} tone={tone} /></div>{items.length ? items.map(item => <Link className="home-list-item row" key={item.id} to={`/detalhes/${table}/${item.id}`}>{render(item)}</Link>) : <p className="muted">{empty}</p>}</div></section>
 }
 
 function HomeAppointments({ appointments, reference }: { appointments: Appointment[]; reference: Date }) {
-  return <section className="home-section"><div className="home-history"><Link to="/historico?tipo=appointments">Ver histórico</Link></div><div className="card home-list-card"><div className="home-card-heading"><h2>Próximas consultas</h2><AddRecordLink to="/consulta" label="Registrar consulta" tone="appointment" /></div>{appointments.length ? appointments.map(appointment => <Link className="home-appointment" key={appointment.id} to={`/detalhes/appointments/${appointment.id}`}><div><b>{attendanceLabel(appointment) || 'Consulta'}</b>{appointment.professional && <p>{appointment.professional}</p>}<p className="muted">{appointmentDateTime(appointment.at, reference)}</p></div><span className="muted">{appointmentCountdown(appointment.at, reference)}</span></Link>) : <p className="muted home-empty">Nenhuma consulta futura.</p>}</div></section>
+  return <section className="home-section"><div className="home-history"><Link to="/historico?tipo=appointments">Ver histórico</Link></div><div className="card home-list-card"><div className="home-card-heading"><h2><HomeTitle tone="appointment">Próximas consultas</HomeTitle></h2><AddRecordLink to="/consulta" label="Registrar consulta" tone="appointment" /></div>{appointments.length ? appointments.map(appointment => <Link className="home-appointment" key={appointment.id} to={`/detalhes/appointments/${appointment.id}`}><div><b>{attendanceLabel(appointment) || 'Consulta'}</b>{appointment.professional && <p>{appointment.professional}</p>}<p className="muted">{appointmentDateTime(appointment.at, reference)}</p></div><span className="muted">{appointmentCountdown(appointment.at, reference)}</span></Link>) : <p className="muted home-empty">Nenhuma consulta futura.</p>}</div></section>
 }
 
 function ImminentAppointment({ appointment, reference }: { appointment: Appointment; reference: Date }) {
