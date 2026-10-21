@@ -74,7 +74,7 @@ it('registra, edita e encerra um episódio sem perder vínculos de glicemia', as
   await userEvent.click(screen.getByRole('link', { name: 'Registrar glicemia' }))
   fireEvent.change(screen.getByLabelText('Valor (mg/dL)'), { target: { value: '100' } }); await userEvent.click(screen.getByRole('button', { name: /Salvar registro de/ }))
   await screen.findByRole('status'); expect((await db.glucose.toArray())[0]?.episodeId).toBe(episode.id)
-  await userEvent.click(screen.getByRole('link', { name: 'Estou com sintomas' }))
+  await userEvent.click(screen.getByRole('link', { name: 'Registrar sintomas' }))
   await screen.findByRole('heading', { name: 'Acompanhando sintomas' }); await userEvent.click(screen.getByRole('button', { name: 'Encerrar episódio' }))
   await screen.findByRole('heading', { name: 'Olá, Perfil de teste' })
   expect((await db.episodes.get(episode.id))?.endedAt).toBeTruthy()

@@ -30,7 +30,7 @@ function HomeTitle({ tone, children }: { tone: HomeActionTone; children: ReactNo
 }
 
 function QuickActions() {
-  return <section className="quick-actions" aria-labelledby="quick-actions-title"><p id="quick-actions-title"></p><div className="quick-actions-grid">{homeQuickActions.map(({ label, to, tone, Icon }) => <Link key={tone} to={to} className={`quick-action quick-action-${tone}`} aria-label={label} title={label}><Icon size={21} aria-hidden="true" /></Link>)}</div></section>
+  return <section className="quick-actions" aria-labelledby="quick-actions-title"><p id="quick-actions-title">Ações rápidas</p><div className="quick-actions-grid">{homeQuickActions.map(({ label, to, tone, Icon }) => <Link key={tone} to={to} className={`quick-action quick-action-${tone}`} aria-label={label} title={label}><Icon size={21} aria-hidden="true" /></Link>)}</div></section>
 }
 
 const symptoms = ['Tremor', 'Suor', 'Fraqueza', 'Tontura', 'Palpitação', 'Confusão', 'Outro']
@@ -74,10 +74,9 @@ function Home() {
     {imminentAppointment && <ImminentAppointment appointment={imminentAppointment} reference={clock} />}
     <BasalReminder profile={profile} insulin={insulin} now={clock} />
     {glucose && glucoseState ? <section className="home-section glucose-section"><div className="home-history"><Link to="/historico?tipo=glucose">Ver histórico</Link></div><section className="home-record card glucose-card" style={{ '--glucose-status-color': glucoseState.color } as React.CSSProperties}><div className="glucose-card-heading"><span className="muted"><HomeTitle tone="glucose">Última medição</HomeTitle> · {eventDateTime(glucose.at)}</span><AddRecordLink to="/glicemia" label="Registrar glicemia" tone="glucose" /></div><Link className="home-glucose-detail" to={`/detalhes/glucose/${glucose.id}`}><h2 style={{ fontSize: '2.3rem', margin: '6px 0' }}>{glucose.value} <small>mg/dL</small></h2><p className="glucose-status">{glucoseState.label}</p>{glucoseContextLabel && <p className="muted">{glucoseContextLabel}</p>}</Link>{todayGlucose.length >= 2 && dailySummary && <DailyGlucoseSummary count={todayGlucose.length} summary={dailySummary} />}{glucoseGuidance && <p className="glucose-guidance">{glucoseGuidance}</p>}<GlucoseInsulinContext basal={insulinContext?.basal} rapid={insulinContext?.rapid} glucoseAt={glucose.at} /></section></section> : <section className="home-section glucose-section"><div className="home-history"><Link to="/historico?tipo=glucose">Ver histórico</Link></div><section className="card home-record glucose-empty-card"><div className="glucose-card-heading"><h2><HomeTitle tone="glucose">Nenhuma medição ainda</HomeTitle></h2><AddRecordLink to="/glicemia" label="Registrar glicemia" tone="glucose" /></div><p className="muted">Registre seu primeiro Ponto para acompanhar seu contexto.</p><GlucoseInsulinContext basal={insulinContext?.basal} rapid={insulinContext?.rapid} /></section></section>}
-    <Link to="/episodio" className="symptoms-action"><TriangleAlert size={22} aria-hidden="true" /><span>Estou com sintomas</span></Link>
-    <HomeAppointments appointments={upcomingAppointments} reference={clock} />
     <HomeList title="Últimas refeições" empty="Nenhuma refeição registrada." items={meals} render={(record: Meal) => <><span>{record.kind}</span><span className="muted">{eventDateTime(record.at)}</span></>} table="meals" filter="meals" createTo="/refeicao" createLabel="Registrar refeição" tone="meal" />
     <HomeList title="Últimos treinos" empty="Nenhum treino registrado." items={workouts} render={record => <><span>{record.activity}</span><span className="muted">{duration(record.startedAt, record.endedAt)}</span></>} table="workouts" filter="workouts" createTo="/treino" createLabel="Registrar treino" tone="workout" />
+    <HomeAppointments appointments={upcomingAppointments} reference={clock} />
   </Layout>
 }
 
