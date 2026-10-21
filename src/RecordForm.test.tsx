@@ -483,6 +483,10 @@ describe('treino', () => {
     await userEvent.click(screen.getByRole('combobox', { name: 'Atividade' })); await screen.findByRole('option', { name: 'Natação' })
     await userEvent.keyboard('{ArrowDown}{Enter}'); expect(screen.getByLabelText('Atividade')).toHaveValue('Natação')
     await userEvent.click(screen.getByRole('button', { name: 'Iniciar agora' })); expect(screen.getByLabelText('Hora de início')).toHaveValue(localInput().slice(11))
+    const dailyWorkout = screen.getByRole('link', { name: 'Abrir Daily Workout' })
+    expect(dailyWorkout).toHaveAttribute('href', 'https://daily-workout-cyan.vercel.app/')
+    expect(dailyWorkout).toHaveAttribute('target', '_blank')
+    expect(dailyWorkout).toHaveAttribute('rel', 'noopener noreferrer')
   })
   it('rejeita término anterior ao início sem persistir', async () => {
     open('/treino'); await fill('treino'); change('Hora de término (opcional)', '22:00'); await save()

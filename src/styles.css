@@ -138,6 +138,10 @@ select.field { text-overflow: ellipsis; }
 .onboarding { display: flex; align-items: center; }
 .onboarding > section { width: 100%; }
 .date-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin-bottom: 12px; }
+.workout-start-actions { align-items:center; display:flex; flex-wrap:wrap; gap:10px; margin:0 0 12px; }
+.daily-workout-link { align-items:center; border:1px solid var(--quick-workout); border-radius:14px; color:var(--quick-workout); display:inline-flex; gap:8px; justify-content:center; min-height:44px; padding:10px 14px; text-decoration:none; }
+.daily-workout-link:hover { background:#1e302d; }
+.daily-workout-link:focus-visible { outline:2px solid var(--quick-workout); outline-offset:3px; }
 .check { display: flex; align-items: flex-start; gap: 10px; margin-top: 16px; font-size: .9rem; }
 .check input { flex-shrink: 0; margin-top: 4px; }
 .hint { margin-top: 12px; padding: 12px; border: 1px solid #574c46; border-radius: 12px; }
