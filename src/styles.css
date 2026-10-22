@@ -57,6 +57,7 @@ select.field { text-overflow: ellipsis; }
 .home-title-link-appointment { --home-title-color:var(--quick-appointment); }
 .home-card-heading { border-bottom:1px solid #39322e; margin-bottom:10px; padding:0 50px 10px; position:relative; text-align:center; }
 .home-card-heading h2 { font-size:1.1rem; margin:0; }
+.home-list-card .home-card-heading { padding-left:0; text-align:left; }
 .home-list-card { padding-top:14px; }
 .home-add { align-items:center; border:0; border-radius:50%; color:#21120a; display:inline-flex; height:44px; justify-content:center; text-decoration:none; transition:filter .15s ease, transform .15s ease; width:44px; }
 .home-add:hover { filter:brightness(1.06); }
