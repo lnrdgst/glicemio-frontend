@@ -3,7 +3,7 @@ import Dexie from 'dexie'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db, GlicopontoDB, stamp } from './db'
 
-describe('persistência local Glicoponto', () => {
+describe('persistência local Glicemio', () => {
   beforeEach(async () => { await Promise.all(db.tables.map(table => table.clear())) })
 
   it('migra v1 para v2 preservando integralmente todas as tabelas e campos legados', async () => {

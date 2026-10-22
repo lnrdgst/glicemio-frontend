@@ -1,4 +1,4 @@
-# Glicoponto — Marco 1
+# Glicemio — Marco 1
 
 Implementação e verificações automatizadas em 14/10/2026. A validação manual móvel permanece pendente; a entrega ainda não tem aceite completo de responsividade.
 

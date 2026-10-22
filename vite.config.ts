@@ -8,7 +8,8 @@ export default defineConfig({
     registerType: 'prompt',
     injectRegister: false,
     manifest: {
-      name: 'Glicoponto', short_name: 'Glicoponto', description: 'Acompanhamento contextual de glicemia',
+      name: 'Glicemio', short_name: 'Glicemio', description: 'Acompanhamento contextual de glicemia',
+      // Preserve a identidade instalada: sem id explícito, com as URLs originais.
       start_url: '/', scope: '/', display: 'standalone', lang: 'pt-BR', theme_color: '#11100f', background_color: '#11100f',
       icons: [
         { src: '/icon-192-v2.png', sizes: '192x192', type: 'image/png' },
