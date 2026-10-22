@@ -68,12 +68,9 @@ select.field { text-overflow: ellipsis; }
 .home-add-meal { background:#C989A2; }
 .home-add-workout { background:#71AFA5; }
 .home-add-appointment { background:#BDB5B0; }
-.glucose-card-heading { align-items:flex-start; display:flex; gap:12px; justify-content:space-between; min-height:44px; }
+.glucose-card-heading { align-items:center; display:flex; gap:12px; justify-content:space-between; min-height:44px; }
 .glucose-card-heading h2 { font-size:1.1rem; margin:0; }
-.glucose-card-title { align-items:center; display:flex; flex:1 1 auto; flex-wrap:wrap; gap:4px 7px; min-width:0; min-height:44px; }
-.glucose-card-title .home-title-link { flex:0 0 auto; }
-.glucose-card-time { white-space:nowrap; }
-.glucose-card-time::before { content:'·'; margin-right:7px; }
+.glucose-card-date { margin:0 0 6px; }
 .glucose-empty-card { margin:0; }
 .glucose-insulin-context { border-top:1px solid #39322e; margin-top:14px; padding-top:12px; }
 .glucose-insulin-heading { align-items:center; display:flex; gap:12px; justify-content:space-between; }
@@ -94,7 +91,6 @@ select.field { text-overflow: ellipsis; }
 .home-appointment p { margin:4px 0 0; }
 .home-appointment > span { flex:0 0 auto; text-align:right; }
 .home-appointment-action { align-self:start; text-decoration:none; }
-@media (max-width:349px) { .glucose-card-time::before { content:''; margin-right:0; } }
 @media (min-width:350px) { .quick-actions-grid { grid-template-columns:repeat(6, minmax(0, 1fr)); } }
 .history-link { display:grid; gap:3px; color:inherit; text-decoration:none; }
 .history-filters { display:flex; gap:8px; overflow-x:auto; padding:4px 0 12px; scrollbar-width:thin; }

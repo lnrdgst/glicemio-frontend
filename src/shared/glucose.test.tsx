@@ -33,9 +33,11 @@ it('atualiza o cartão da Home após novo registro e edição sem alterar o regi
   const record = stamp({ value: 65, at: now(), context: 'Jejum' }); await db.glucose.add(record)
   render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
   expect(await screen.findByText('Hipoglicemia nível 1')).toBeInTheDocument()
-  const glucoseHeading = screen.getByText('Última medição').closest('.glucose-card-title')!
+  const glucoseHeading = screen.getByText('Última medição').closest('.glucose-card-heading')!
   expect(glucoseHeading).toBeInTheDocument()
-  expect(glucoseHeading.querySelector('.glucose-card-time')).toHaveTextContent(/Hoje, às/)
+  expect(glucoseHeading).not.toHaveTextContent(/Hoje, às/)
+  const glucoseDetail = screen.getByRole('link', { name: /65 mg\/dL/ })
+  expect(glucoseDetail.querySelector('.glucose-card-date')).toHaveTextContent(/Hoje, às/)
   expect(screen.getByText(/plano individual de tratamento da hipoglicemia/i)).toBeInTheDocument()
   await db.glucose.put({ ...record, value: 115, updatedAt: now() })
   expect(await screen.findByText('Dentro da faixa definida')).toBeInTheDocument()
