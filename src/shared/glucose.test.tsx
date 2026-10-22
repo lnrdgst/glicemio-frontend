@@ -50,9 +50,8 @@ it('exibe o contexto e a refeição vinculada à última medição na Home', asy
   expect(await screen.findByText('Após refeição · Almoço')).toBeInTheDocument()
   expect(screen.queryByText('Associada a uma refeição')).toBeNull()
   expect((await db.glucose.get(glucose.id))?.mealId).toBe(meal.id)
-  const history = screen.getAllByRole('link', { name: /Ver histórico/ }).find(link => link.getAttribute('href') === '/historico?tipo=glucose')!
-  expect(history.closest('.home-history')).toBeTruthy()
-  expect(history.closest('.glucose-card')).toBeNull()
+  const history = screen.getByRole('link', { name: 'Última medição' })
+  expect(history).toHaveAttribute('href', '/historico?tipo=glucose')
   const section = history.closest('.home-section')!
   expect(section).toHaveClass('glucose-section')
   expect(section.querySelector('.glucose-card')).toBeTruthy()

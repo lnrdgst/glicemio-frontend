@@ -45,8 +45,16 @@ select.field { text-overflow: ellipsis; }
 .quick-action-symptoms, .home-title-icon-symptoms { color:var(--quick-symptoms); }
 .home-title { align-items:center; display:inline-flex; gap:7px; justify-content:center; }
 .home-title-icon { flex:0 0 auto; }
-.home-history { display:flex; justify-content:flex-end; min-height:24px; margin-bottom:6px; }
-.home-history > a { color:var(--color-copper); font-size:.9rem; text-decoration:none; }
+.home-title-link { align-items:center; color:var(--home-title-color); display:inline-flex; gap:3px; justify-content:center; min-height:44px; text-decoration:none; }
+.home-title-link .home-title { min-width:0; }
+.home-title-link .home-title > span { min-width:0; }
+.home-title-link:hover { filter:brightness(1.12); }
+.home-title-link:focus-visible { outline:2px solid #fff; outline-offset:3px; }
+.home-title-link-glucose { --home-title-color:var(--quick-glucose); }
+.home-title-link-insulin { --home-title-color:var(--quick-insulin); }
+.home-title-link-meal { --home-title-color:var(--quick-meal); }
+.home-title-link-workout { --home-title-color:var(--quick-workout); }
+.home-title-link-appointment { --home-title-color:var(--quick-appointment); }
 .home-card-heading { border-bottom:1px solid #39322e; margin-bottom:10px; padding:0 50px 10px; position:relative; text-align:center; }
 .home-card-heading h2 { font-size:1.1rem; margin:0; }
 .home-list-card { padding-top:14px; }
@@ -63,7 +71,7 @@ select.field { text-overflow: ellipsis; }
 .glucose-card-heading { align-items:flex-start; display:flex; gap:12px; justify-content:space-between; min-height:44px; }
 .glucose-card-heading h2 { font-size:1.1rem; margin:0; }
 .glucose-card-title { align-items:center; display:flex; flex:1 1 auto; flex-wrap:wrap; gap:4px 7px; min-width:0; min-height:44px; }
-.glucose-card-title .home-title { flex:0 0 auto; }
+.glucose-card-title .home-title-link { flex:0 0 auto; }
 .glucose-card-time { white-space:nowrap; }
 .glucose-card-time::before { content:'·'; margin-right:7px; }
 .glucose-empty-card { margin:0; }

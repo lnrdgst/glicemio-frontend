@@ -86,6 +86,7 @@ describe('onboarding', () => {
     expect(workout).toBeTruthy()
     expect(appointment.getAttribute('href')).toBe('/consulta')
     expect(appointment.className).toContain('home-add-appointment')
+    expect(screen.queryByRole('link', { name: 'Ver histórico' })).toBeNull()
     expect(screen.queryByText('Estou com sintomas')).toBeNull()
     expect(screen.getByText('Nenhuma consulta futura.')).toBeTruthy()
     await userEvent.click(appointment)
@@ -101,5 +102,20 @@ describe('onboarding', () => {
     expect(meals.compareDocumentPosition(workouts)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     expect(workouts.compareDocumentPosition(appointments)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     expect(screen.queryByText('Estou com sintomas')).toBeNull()
+  })
+
+  it.each([
+    ['Nenhuma medição ainda', 'Glicemias'],
+    ['Últimas aplicações registradas', 'Insulinas'],
+    ['Últimas refeições', 'Refeições'],
+    ['Últimos treinos', 'Treinos'],
+    ['Próximas consultas', 'Consultas'],
+  ])('abre o Histórico filtrado ao selecionar %s', async (title, filter) => {
+    await db.profiles.put({ id: 'local', name: 'Rita', createdAt: now(), updatedAt: now() })
+    const user = userEvent.setup()
+    renderApp()
+    await user.click(await screen.findByRole('link', { name: title }))
+    expect(await screen.findByRole('heading', { name: 'Histórico' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: filter }).className).toContain('active')
   })
 })

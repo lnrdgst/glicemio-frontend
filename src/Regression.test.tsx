@@ -106,7 +106,7 @@ it('exibe somente as duas consultas futuras mais próximas, em ordem cronológic
   expect(appointments[0]).toHaveAttribute('href', `/detalhes/appointments/${first.id}`)
   expect(appointments[1]).toHaveTextContent('Nutricionista')
   expect(appointments[1]).toHaveTextContent('Profissional com nome longo para celular')
-  expect(screen.getAllByRole('link', { name: 'Ver histórico' }).find(link => link.getAttribute('href') === '/historico?tipo=appointments')).toBeTruthy()
+  expect(screen.getByRole('link', { name: 'Próximas consultas' })).toHaveAttribute('href', '/historico?tipo=appointments')
 })
 
 it('mostra uma única consulta futura ou o estado vazio sem incluir consultas passadas', async () => {
@@ -122,7 +122,7 @@ it('mostra uma única consulta futura ou o estado vazio sem incluir consultas pa
   await screen.findByRole('heading', { name: 'Olá, Perfil de teste' })
   expect(screen.getByRole('heading', { name: 'Próximas consultas' })).toBeInTheDocument()
   expect(screen.getByText('Nenhuma consulta futura.')).toBeInTheDocument()
-  expect(screen.getAllByRole('link', { name: 'Ver histórico' }).find(link => link.getAttribute('href') === '/historico?tipo=appointments')).toBeTruthy()
+  expect(screen.getByRole('link', { name: 'Próximas consultas' })).toHaveAttribute('href', '/historico?tipo=appointments')
 })
 
 it('identifica uma consulta futura no dia atual como Hoje', async () => {
