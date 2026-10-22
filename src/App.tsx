@@ -7,6 +7,7 @@ import { db, now, stamp, type Appointment, type Insulin, type Meal } from './dat
 import { exportBackup, previewBackup, restoreBackup, type ImportPreview, type ProfileStrategy } from './database/backup'
 import { RecordForm, type RecordKind } from './RecordForm'
 import { ProfileForm } from './ProfileForm'
+import { BrandLogo } from './shared/BrandLogo'
 import { insulinName } from './shared/records'
 import { classifyGlucose, glucoseSummary, hypoglycemiaGuidance } from './shared/glucose'
 import { shouldShowBasalReminder } from './shared/basalReminder'
@@ -54,7 +55,7 @@ function Delete({ run, onDeleted }: { run: () => Promise<void>; onDeleted: () =>
 
 function Onboarding() {
   const nav = useNavigate()
-  return <main className="shell onboarding"><section className="card"><span style={{ color: '#d7865b' }}>GLICEMIO</span><h1>Vamos começar pelo essencial.</h1><p className="muted">Seus registros ficam neste dispositivo durante esta versão de desenvolvimento.</p><ProfileForm onSaved={() => nav('/', { replace: true })} /><BackupActions onRestored={() => nav('/', { replace: true })} /></section></main>
+  return <main className="shell onboarding"><section className="card"><BrandLogo /><h1>Vamos começar pelo essencial.</h1><p className="muted">Seus registros ficam neste dispositivo durante esta versão de desenvolvimento.</p><ProfileForm onSaved={() => nav('/', { replace: true })} /><BackupActions onRestored={() => nav('/', { replace: true })} /></section></main>
 }
 
 function useProfile() { return useLiveQuery(() => db.profiles.get('local').then(value => value ?? null), []) }
@@ -73,7 +74,7 @@ function Home() {
   const glucoseState = glucose ? classifyGlucose(glucose.value) : undefined; const glucoseGuidance = glucoseState ? hypoglycemiaGuidance(glucoseState) : undefined; const glucoseContext = glucose?.context && glucose.context !== 'Não informado' ? glucose.context : undefined; const glucoseContextLabel = linkedMeal ? glucoseContext ? `${glucoseContext} · ${linkedMeal.kind}` : linkedMeal.kind : glucoseContext; const dailySummary = glucoseSummary(todayGlucose.map(item => item.value)); const insulinContext = glucose ? { basal: insulin.find(item => item.kind === 'Basal/lenta'), rapid: insulin.find(item => item.kind === 'Rápida') } : undefined; const upcomingAppointments = appointments.filter(appointment => new Date(appointment.at) > clock).slice(0, 2); const imminentAppointment = upcomingAppointments.find(appointment => new Date(appointment.at).getTime() - clock.getTime() <= 24 * 60 * 60 * 1000)
   if (profile === undefined) return <main className="shell" />
   if (!profile) return <Navigate to="/onboarding" replace />
-  return <Layout>{location.state?.success && <p role="status">{location.state.success}</p>}<header><span style={{ color: '#d7865b', fontWeight: 800, letterSpacing: 2 }}>GLICEMIO</span><h1 style={{ marginBottom: 4 }}>Olá, {profile.name}</h1>{profile.diagnosis && <p className="muted">{profile.diagnosis}</p>}</header>
+  return <Layout>{location.state?.success && <p role="status">{location.state.success}</p>}<header><BrandLogo /><h1 style={{ marginBottom: 4 }}>Olá, {profile.name}</h1>{profile.diagnosis && <p className="muted">{profile.diagnosis}</p>}</header>
     <QuickActions />
     {imminentAppointment && <ImminentAppointment appointment={imminentAppointment} reference={clock} />}
     <BasalReminder profile={profile} insulin={insulin} now={clock} />
