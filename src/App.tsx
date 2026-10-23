@@ -10,12 +10,14 @@ import { ProfileForm } from './ProfileForm'
 import { BrandLogo } from './shared/BrandLogo'
 import { MealTimeReferenceReview } from './MealTimeReferenceReview'
 import { PostMealReminder } from './PostMealReminder'
+import { MealItemsSummary } from './MealItemsSummary'
+import { deleteMealIfUnreferenced, MealFormError } from './database/mealForm'
 import { mealTimeReferenceLabel } from './shared/meals'
 import { MealTimeReferenceNote } from './shared/MealTimeReferenceNote'
 import { insulinName } from './shared/records'
 import { classifyGlucose, glucoseSummary, hypoglycemiaGuidance } from './shared/glucose'
 import { shouldShowBasalReminder } from './shared/basalReminder'
-import { Button, Layout, scrollToTop, usePersistence } from './shared/ui'
+import { Button, Layout, scrollToTop, usePersistence, ValidationError } from './shared/ui'
 import { appointmentCountdown, appointmentDateTime, dateTime, dayHeading, duration, eventDateTime, localDayKey, time } from './shared/format'
 
 type HomeActionTone = 'glucose' | 'meal' | 'insulin' | 'workout' | 'appointment' | 'symptoms'
@@ -52,9 +54,9 @@ const attendanceLabel = (record: any) => (record.attendanceType === 'other' ? re
 const appointmentSummary = (record: any) => [attendanceLabel(record), record.professional].filter(Boolean).join(' · ') || 'Profissional não informado'
 
 function Delete({ run, onDeleted }: { run: () => Promise<void>; onDeleted: () => void }) {
-  const { run: persist, saving, error } = usePersistence(); const [confirming, setConfirming] = useState(false)
+  const { run: persist, saving, error } = usePersistence('Não foi possível excluir o registro. Tente novamente.'); const [confirming, setConfirming] = useState(false)
   const remove = () => void persist(async () => { await run(); onDeleted() })
-  return <span className="details-delete">{confirming ? <div className="delete-confirm" role="alertdialog" aria-modal="true" aria-labelledby="delete-record-title"><p id="delete-record-title"><b>Excluir este registro?</b></p><p className="muted">Esta ação não poderá ser desfeita.</p><div className="actions"><button type="button" className="secondary" disabled={saving} onClick={() => setConfirming(false)}>Cancelar</button><button type="button" className="danger" disabled={saving} onClick={remove}><Trash2 size={18} aria-hidden="true" />{saving ? 'Excluindo…' : 'Excluir registro'}</button></div></div> : <button type="button" className="danger" onClick={() => setConfirming(true)}><Trash2 size={18} aria-hidden="true" />Excluir</button>}{error && <span role="alert">Não foi possível excluir o registro. Tente novamente.</span>}</span>
+  return <span className="details-delete">{confirming ? <div className="delete-confirm" role="alertdialog" aria-modal="true" aria-labelledby="delete-record-title"><p id="delete-record-title"><b>Excluir este registro?</b></p><p className="muted">Esta ação não poderá ser desfeita.</p><div className="actions"><button type="button" className="secondary" disabled={saving} onClick={() => setConfirming(false)}>Cancelar</button><button type="button" className="danger" disabled={saving} onClick={remove}><Trash2 size={18} aria-hidden="true" />{saving ? 'Excluindo…' : 'Excluir registro'}</button></div></div> : <button type="button" className="danger" onClick={() => setConfirming(true)}><Trash2 size={18} aria-hidden="true" />Excluir</button>}{error && <span role="alert">{error}</span>}</span>
 }
 
 function Onboarding() {
@@ -144,7 +146,12 @@ function Details() {
   if (!record) return <Layout><Link to="/" className="muted">← Início</Link><section className="card"><h1>Registro não encontrado</h1></section></Layout>
   const at = record.at || record.startedAt
   const detail = table === 'glucose' ? `${record.value} mg/dL · ${record.context || 'Sem contexto'}` : table === 'insulin' ? `${insulinName(record) || record.kind} · ${record.dose.toLocaleString('pt-BR')} UI` : table === 'meals' ? record.kind : table === 'workouts' ? `${record.activity} · ${duration(record.startedAt, record.endedAt)}` : table === 'episodes' ? record.symptoms.join(', ') || 'Sem sintomas selecionados' : appointmentSummary(record)
-  return <Layout><Link to="/" className="muted">← Início</Link><section className={`card details details-${config.edit}`}><div className="details-heading"><h1 className="details-title">{config.title}</h1></div><div className="details-content"><p className="details-primary">{detail}</p><p>{eventDateTime(at)}</p>{table === 'meals' && <><p className="muted">{mealTimeReferenceLabel(record)}</p><MealTimeReferenceNote meal={record} /></>}{record.note && <p className="muted">{record.note}</p>}{record.description && <p className="muted">{record.description}</p>}</div><div className="details-actions"><Link className="primary details-edit" to={config.edit === 'episodio' ? `/episodio/${id}/editar` : `/${config.edit}/${id}/editar`}><Pencil size={18} aria-hidden="true" />Editar</Link><Delete run={() => (db as any)[table].delete(id)} onDeleted={() => nav(`/historico?tipo=${table}`, { state: { success: 'Registro excluído deste dispositivo.' } })} /></div></section></Layout>
+  const remove = async () => {
+    if (table !== 'meals') return db.table(table).delete(id)
+    try { await deleteMealIfUnreferenced(id) }
+    catch (cause) { if (cause instanceof MealFormError) throw new ValidationError(cause.message); throw cause }
+  }
+  return <Layout><Link to="/" className="muted">← Início</Link><section className={`card details details-${config.edit}`}><div className="details-heading"><h1 className="details-title">{config.title}</h1></div><div className="details-content"><p className="details-primary">{detail}</p><p>{eventDateTime(at)}</p>{table === 'meals' && <><p className="muted">{mealTimeReferenceLabel(record)}</p><MealTimeReferenceNote meal={record} /></>}{record.note && <p className="muted">{record.note}</p>}{record.description && <p className="muted">{record.description}</p>}{table === 'meals' && <MealItemsSummary mealId={record.id} />}</div><div className="details-actions"><Link className="primary details-edit" to={config.edit === 'episodio' ? `/episodio/${id}/editar` : `/${config.edit}/${id}/editar`}><Pencil size={18} aria-hidden="true" />Editar</Link><Delete run={remove} onDeleted={() => nav(`/historico?tipo=${table}`, { state: { success: 'Registro excluído deste dispositivo.' } })} /></div></section></Layout>
 }
 
 type HistoryFilter = 'all' | 'glucose' | 'meals' | 'insulin' | 'workouts' | 'episodes' | 'appointments'

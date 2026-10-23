@@ -9,6 +9,23 @@ button:disabled { cursor: wait; opacity: .65; }
 .brand-logo { display: block; width: auto; height: 28px; max-width: 100%; max-height: 28px; object-fit: contain; object-position: left center; }
 .field { max-width: 100%; }
 .date-meaning { grid-column: 1 / -1; margin: 0; }
+.meal-items-editor { border-top:1px solid #39322e; margin:20px 0; padding-top:16px; }
+.meal-items-editor > h2 { color:var(--quick-meal); font-size:1rem; margin:0 0 8px; }
+.meal-items-editor > .muted { margin:8px 0 12px; }
+.meal-item { border:1px solid #4d443e; border-radius:12px; margin:16px 0; padding:0 12px 10px; }
+.meal-item > legend { color:var(--color-muted); font-size:.85rem; padding:0 6px; }
+.meal-item-amount { display:grid; gap:10px; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); }
+.meal-item-footer { align-items:center; display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:10px; }
+.meal-item-footer > .muted { flex:1 1 150px; font-size:.78rem; margin:0; }
+.meal-item-footer > button, .meal-add-item { align-items:center; display:inline-flex; gap:6px; justify-content:center; min-height:44px; }
+.meal-add-item { max-width:100%; }
+.meal-quantity-hint { font-size:.78rem; }
+.food-suggestions [role="option"] { min-height:44px; overflow-wrap:anywhere; }
+.meal-items-summary { border-top:1px solid #39322e; margin-top:16px; padding-top:12px; }
+.meal-items-summary h2 { color:var(--quick-meal); font-size:1rem; }
+.meal-items-summary ul { list-style:none; padding:0; }
+.meal-items-summary li { display:flex; flex-wrap:wrap; gap:4px 12px; justify-content:space-between; padding:6px 0; }
+@media (max-width:360px) { .meal-item-amount { grid-template-columns:minmax(0, 1fr); } }
 .meal-reference-review { border-top: 1px solid #39322e; margin-top: 20px; padding-top: 12px; }
 .meal-reference-list { list-style: none; margin: 12px 0; padding: 0; }
 .meal-reference-list li { padding: 8px 0; overflow-wrap: anywhere; }

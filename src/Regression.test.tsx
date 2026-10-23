@@ -190,7 +190,7 @@ it('exporta JSON completo incluindo legados, sem modificar o armazenamento', asy
   expect(await db.insulin.get(legacy.id)).toEqual(legacy); expect(revoke).toHaveBeenCalledWith('blob:test')
 })
 
-it('confirma a exclusão no cartão de detalhes e preserva referências sem cascata', async () => {
+it('mantém a confirmação e bloqueia excluir refeição com glicemia vinculada', async () => {
   const meal = stamp({ kind: 'Almoço', at: now() }); const glucose = stamp({ value: 123, at: now(), mealId: meal.id })
   await db.meals.add(meal); await db.glucose.add(glucose)
   open('/detalhes/meals/' + meal.id)
@@ -209,9 +209,21 @@ it('confirma a exclusão no cartão de detalhes e preserva referências sem casc
   expect(screen.queryByRole('alertdialog')).toBeNull()
   await userEvent.click(screen.getByRole('button', { name: 'Excluir' }))
   await userEvent.click(screen.getByRole('button', { name: 'Excluir registro' }))
-  await waitFor(async () => expect(await db.meals.get(meal.id)).toBeUndefined())
+  expect(await screen.findByRole('alert')).toHaveTextContent('Esta refeição está associada a uma ou mais medições de glicemia e não pode ser excluída.')
+  expect(await db.meals.get(meal.id)).toEqual(meal)
   expect(await db.glucose.get(glucose.id)).toEqual(glucose)
+  expect(screen.queryByText('Registro excluído deste dispositivo.')).toBeNull()
+})
+
+it('exclui refeição sem dependências e confirma o resultado no histórico', async () => {
+  const meal = stamp({ kind: 'Almoço', at: now() })
+  await db.meals.add(meal)
+  open('/detalhes/meals/' + meal.id)
+  await userEvent.click(await screen.findByRole('button', { name: 'Excluir' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Excluir registro' }))
+  expect(await screen.findByRole('heading', { name: 'Histórico' })).toBeInTheDocument()
   expect(await screen.findByRole('status')).toHaveTextContent('Registro excluído deste dispositivo.')
+  expect(await db.meals.get(meal.id)).toBeUndefined()
 })
 
 it('mantém o registro e informa falha se a exclusão local não persistir', async () => {

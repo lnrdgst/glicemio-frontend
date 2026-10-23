@@ -8,7 +8,7 @@ export function Layout({ children, onBeforeNavigate }: { children: ReactNode; on
   const links: [string, LucideIcon, string][] = [['/', Activity, 'Início'], ['/historico', CalendarDays, 'Histórico'], ['/relatorio', ChartNoAxesCombined, 'Relatório'], ['/mais', MoreHorizontal, 'Ajustes']]
   return <div className="shell">{children}<nav className="nav" aria-label="Navegação principal">{links.map(([to, Icon, label]) => <NavLink key={to} to={to} end={to === '/'} onClick={event => { if (onBeforeNavigate && !onBeforeNavigate()) { event.preventDefault(); return } if (event.currentTarget.getAttribute('aria-current') === 'page') { event.preventDefault(); scrollToTop() } }}><Icon size={20} /><span>{label}</span></NavLink>)}</nav></div>
 }
-export function usePersistence() {
+export function usePersistence(failureMessage = 'Não foi possível salvar o registro neste dispositivo. Seus dados preenchidos foram mantidos. Tente novamente.') {
   const pending = useRef(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -18,7 +18,7 @@ export function usePersistence() {
     try { await save() }
     catch (err) {
       console.error('Falha no registro local', err)
-      const validation = err instanceof ValidationError ? err.message : 'Não foi possível salvar o registro neste dispositivo. Seus dados preenchidos foram mantidos. Tente novamente.'
+      const validation = err instanceof ValidationError ? err.message : failureMessage
       setError(validation)
     } finally { pending.current = false; setSaving(false) }
   }

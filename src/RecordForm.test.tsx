@@ -252,7 +252,7 @@ describe('persistência dos formulários', () => {
     expect(await screen.findByRole('link', { name: /Detalhes|mg\/dL|Almoço|Insulina|Treino/ })).toBeInTheDocument()
   })
   it.each([['glicemia', 'glucose'], ['refeicao', 'meals'], ['insulina', 'insulin'], ['treino', 'workouts']])('mostra falha de %s, mantém os dados e permite tentar novamente', async (kind, table) => {
-    const spy = vi.spyOn(db[table as 'glucose' | 'meals' | 'insulin' | 'workouts'], 'add').mockRejectedValueOnce(new Error('QuotaExceededError'))
+    const spy = vi.spyOn(db[table as 'glucose' | 'meals' | 'insulin' | 'workouts'], kind === 'refeicao' ? 'put' : 'add').mockRejectedValueOnce(new Error('QuotaExceededError'))
     open(`/${kind}`); await fill(kind); await save()
     expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível salvar')
     expect(screen.queryByRole('status')).toBeNull()
@@ -263,12 +263,12 @@ describe('persistência dos formulários', () => {
   })
   it('bloqueia submissões repetidas e só anuncia sucesso após a gravação', async () => {
     let release!: () => void
-    const original = db.meals.add.bind(db.meals)
-    const spy = vi.spyOn(db.meals, 'add').mockImplementation(record => new Dexie.Promise<void>(resolve => { release = resolve }).then(() => original(record)))
+    const original = db.meals.put.bind(db.meals)
+    const spy = vi.spyOn(db.meals, 'put').mockImplementation(record => Dexie.Promise.resolve(Dexie.waitFor(new Dexie.Promise<void>(resolve => { release = resolve }))).then(() => original(record)))
     open('/refeicao'); await fill('refeicao')
     const form = screen.getByRole('button', { name: /Salvar registro de/ }).closest('form')!
     fireEvent.submit(form); fireEvent.submit(form)
-    expect(spy).toHaveBeenCalledTimes(1); expect(screen.queryByRole('status')).toBeNull()
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(1)); expect(screen.queryByRole('status')).toBeNull()
     expect(screen.getByRole('button', { name: 'Salvando…' })).toBeDisabled()
     await act(async () => release())
     expect(await screen.findByRole('status')).toHaveTextContent('Registro salvo')
