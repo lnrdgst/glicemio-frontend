@@ -33,6 +33,18 @@ Antes da escrita, todas as tabelas são comparadas novamente com a prévia dentr
 
 O banco `glicoponto` e o esquema Dexie versão 2 permanecem iguais: o campo opcional não exige novo índice ou migração de esquema. O backup continua no formato `glicoponto-backup`, versão 1, preservando e validando o metadado opcional e aceitando os arquivos anteriores sem atribuir um significado presumido. Ao editar uma refeição sem mudar o horário exibido, a string `at` original é preservada, incluindo segundos, milissegundos e offset.
 
+## Lembrete opcional de glicemia após refeições
+
+O aviso discreto na Home considera somente `timeReference: "meal_start"`, usando o instante de `Meal.at`. Aparece de 120 minutos (inclusive) a 180 minutos (exclusive); datas inválidas, sem hora/fuso, refeições futuras, de fim ou não confirmadas não são usadas. A passagem pelos limites é agendada dentro da aplicação e reavaliada ao voltar à janela. Não há push, notificações do sistema ou promessa de execução em segundo plano.
+
+Uma medição já registrada entre 90 e 180 minutos após o início, e não posterior ao relógio atual, suprime o aviso pelo horário, independentemente de `mealId`, contexto ou valor. Isso somente evita avisos redundantes: não cria associações, não classifica resultados e não solicita uma segunda medição. As faixas de 120–180 e 90–180 minutos são decisões de UX deste recurso, não intervalos clínicos universais. Os horários individuais podem variar, conforme orienta a [ADA sobre monitoramento da glicemia](https://diabetes.org/living-with-diabetes/treatment-care/checking-your-blood-sugar).
+
+Entre refeições elegíveis próximas, somente a de início mais recente é considerada. Dispensá-la não apresenta em seguida um aviso mais antigo. A dispensa fica em `localStorage`, por UUID da refeição, atravessa reaberturas e mudanças de dia e continua respeitada se o horário dessa mesma refeição for editado. Não muda a refeição nem os vínculos e não integra o JSON clínico. Se o armazenamento de preferências falhar, a interface informa que a dispensa vale apenas nesta abertura.
+
+O recurso começa habilitado quando a preferência está ausente e pode ser desativado em **Ajustes > Perfil > Lembretes na Home**, desmarcando **Lembrete de glicemia após refeições** e salvando o perfil. O campo opcional `postMealReminderEnabled` é preservado e validado no backup versão 1; arquivos anteriores sem a preferência continuam aceitos. Não há mudança no nome ou na versão do banco Dexie.
+
+O lembrete usa a posição dos avisos contextuais existentes, sem cartão permanente. Orientação de hipoglicemia, glicemia já classificada com atenção alta, consulta próxima e lembrete basal ativo têm prioridade. A ação de registro abre `/glicemia`, sem associação automática. Medições em qualquer outro horário continuam disponíveis e o fim da janela não informa que deixaram de ser necessárias.
+
 ## Verificação
 
 ```sh
