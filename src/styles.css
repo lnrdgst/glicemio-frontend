@@ -117,11 +117,16 @@ select.field { text-overflow: ellipsis; }
 .glucose-insulin-after { font-style:italic; }
 .glucose-insulin-context-line strong { color:#A99BCB; white-space:nowrap; }
 .home-list-item { display:flex; color:inherit; text-decoration:none; padding:8px 0; }
-.meal-list-item { display:block; }
+.meal-list-item, .workout-list-item { display:block; }
 .meal-list-item + .meal-list-item { border-top:1px solid #4c3640; }
-.meal-record-info { display:grid; gap:3px; min-width:0; }
+.workout-list-item:not(:last-child) { border-bottom:1px solid #3b615b; }
+.meal-record-info, .home-workout-info { display:grid; gap:3px; min-width:0; }
 .meal-record-info > strong { color:var(--quick-meal); }
-.meal-record-info > .muted { font-size:.82rem; margin:0; }
+.home-workout-info > strong { color:var(--quick-workout); }
+.home-workout-info > .home-workout-duration { font-size:.86rem; }
+.home-workout-times { display:flex; flex-wrap:wrap; gap:3px 12px; }
+.home-workout-times > span { min-width:0; }
+.meal-record-info > .muted, .home-workout-info > .muted { font-size:.82rem; margin:0; }
 .meal-record-info > .meal-time-reference { font-size:.78rem; }
 .meal-history-item { border-bottom:1px solid #4c3640; margin-bottom:10px; padding-bottom:10px; }
 .meal-history-item:last-child { border-bottom:0; }

@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CalendarDays, ChevronRight, Droplets, Dumbbell, Pencil, Plus, Soup, Stethoscope, Syringe, Trash2, TriangleAlert, Utensils, type LucideIcon } from 'lucide-react'
-import { db, now, stamp, type Appointment, type Insulin, type Meal } from './database/db'
+import { db, now, stamp, type Appointment, type Insulin, type Meal, type Workout } from './database/db'
 import { exportBackup, previewBackup, restoreBackup, type ImportPreview, type ProfileStrategy } from './database/backup'
 import { RecordForm, type RecordKind } from './RecordForm'
 import { ProfileForm } from './ProfileForm'
@@ -90,7 +90,7 @@ function Home() {
     {glucose && glucoseState ? <section className="home-section glucose-section"><section className="home-record card glucose-card" style={{ '--glucose-status-color': glucoseState.color } as React.CSSProperties}><div className="glucose-card-heading"><HomeHistoryTitle tone="glucose" filter="glucose">Última medição</HomeHistoryTitle><AddRecordLink to="/glicemia" label="Registrar glicemia" tone="glucose" /></div><Link className="home-glucose-detail" to={`/detalhes/glucose/${glucose.id}`}><h2 style={{ fontSize: '2.3rem', margin: '6px 0' }}>{glucose.value} <small>mg/dL</small></h2><p className="muted glucose-card-date">{eventDateTime(glucose.at)}</p><p className="glucose-status">{glucoseState.label}</p>{glucoseContextLabel && <p className="muted">{glucoseContextLabel}</p>}</Link>{todayGlucose.length >= 2 && dailySummary && <DailyGlucoseSummary count={todayGlucose.length} summary={dailySummary} />}{glucoseGuidance && <p className="glucose-guidance">{glucoseGuidance}</p>}<GlucoseInsulinContext basal={insulinContext?.basal} rapid={insulinContext?.rapid} glucoseAt={glucose.at} /></section></section> : <section className="home-section glucose-section"><section className="card home-record glucose-empty-card"><div className="glucose-card-heading"><h2><HomeHistoryTitle tone="glucose" filter="glucose">Nenhuma medição ainda</HomeHistoryTitle></h2><AddRecordLink to="/glicemia" label="Registrar glicemia" tone="glucose" /></div><p className="muted">Registre seu primeiro Ponto para acompanhar seu contexto.</p><GlucoseInsulinContext basal={insulinContext?.basal} rapid={insulinContext?.rapid} /></section></section>}
     <PostMealReminder enabled={profile.postMealReminderEnabled !== false} />
     <HomeList title="Últimas refeições" empty="Nenhuma refeição registrada." items={meals} render={(record: Meal) => <MealRecordInfo meal={record} />} table="meals" filter="meals" createTo="/refeicao" createLabel="Registrar refeição" tone="meal" />
-    <HomeList title="Últimos treinos" empty="Nenhum treino registrado." items={workouts} render={record => <><span>{record.activity}</span><span className="muted">{duration(record.startedAt, record.endedAt)}</span></>} table="workouts" filter="workouts" createTo="/treino" createLabel="Registrar treino" tone="workout" />
+    <HomeList title="Últimos treinos" empty="Nenhum treino registrado." items={workouts} render={(record: Workout) => <HomeWorkoutInfo workout={record} />} table="workouts" filter="workouts" createTo="/treino" createLabel="Registrar treino" tone="workout" />
     <HomeAppointments appointments={upcomingAppointments} reference={clock} />
   </Layout>
 }
@@ -118,8 +118,30 @@ function BasalReminder({ profile, insulin, now: current, fallback }: { profile: 
   return <section className="card basal-reminder"><b>Insulina basal — lembrete</b><p>Ainda não há registro da sua insulina basal para hoje. Deseja registrar agora?</p>{last && <p className="muted">Último registro: {eventDateTime(last.at)}.</p>}<p className="muted">A ausência de registro não confirma ausência de aplicação.</p><div className="actions"><button className="primary" onClick={() => nav('/insulina')}>Registrar agora</button><button className="secondary" onClick={() => save({ laterUntil: Date.now() + 15 * 60000 })}>Lembrar mais tarde</button><button className="secondary" onClick={() => save({ ignoredDay: today })}>Ignorar hoje</button></div></section>
 }
 
+function HomeWorkoutInfo({ workout }: { workout: Workout }) {
+  const date = (value: string) => {
+    if (!Number.isFinite(Date.parse(value))) return 'Data não informada'
+    // Datas legadas sem hora não devem ganhar meia-noite ou mudar de dia pelo fuso.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value.split('-').reverse().join('/')
+    return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
+  }
+  const hasTime = (value?: string): value is string => Boolean(value && /[T ]\d{2}:\d{2}/.test(value) && Number.isFinite(Date.parse(value)))
+  const startDate = date(workout.startedAt), endDate = workout.endedAt ? date(workout.endedAt) : undefined
+  const startHasTime = hasTime(workout.startedAt), endHasTime = hasTime(workout.endedAt)
+  const showDuration = startHasTime && endHasTime && Date.parse(workout.endedAt!) >= Date.parse(workout.startedAt)
+  return <div className="home-workout-info">
+    <strong>{workout.activity}</strong>
+    <span className="muted">{startDate}</span>
+    <div className="muted home-workout-times">
+      <span>{startHasTime ? `Início: ${time(workout.startedAt)}` : 'Horário de início não registrado'}</span>
+      <span>{workout.endedAt ? `Término: ${endDate !== startDate ? `${endDate}${endHasTime ? ' às ' : ' · '}` : ''}${endHasTime ? time(workout.endedAt!) : 'horário não registrado'}` : 'Término não registrado'}</span>
+    </div>
+    {showDuration && <strong className="home-workout-duration">Duração: {duration(workout.startedAt, workout.endedAt)}</strong>}
+  </div>
+}
+
 function HomeList({ title, empty, items, render, table, filter, createTo, createLabel, tone }: { title: string; empty: string; items: any[]; render: (item: any) => React.ReactNode; table: string; filter: 'meals' | 'workouts'; createTo: string; createLabel: string; tone: 'meal' | 'workout' }) {
-  return <section className="home-section"><div className="card home-list-card"><div className="home-card-heading"><h2><HomeHistoryTitle tone={tone} filter={filter}>{title}</HomeHistoryTitle></h2><AddRecordLink to={createTo} label={createLabel} tone={tone} /></div>{items.length ? items.map(item => <Link className={`home-list-item ${tone === 'meal' ? 'meal-list-item' : 'row'}`} key={item.id} to={`/detalhes/${table}/${item.id}`}>{render(item)}</Link>) : <p className="muted">{empty}</p>}</div></section>
+  return <section className="home-section"><div className="card home-list-card"><div className="home-card-heading"><h2><HomeHistoryTitle tone={tone} filter={filter}>{title}</HomeHistoryTitle></h2><AddRecordLink to={createTo} label={createLabel} tone={tone} /></div>{items.length ? items.map(item => <Link className={`home-list-item ${tone}-list-item`} key={item.id} to={`/detalhes/${table}/${item.id}`}>{render(item)}</Link>) : <p className="muted">{empty}</p>}</div></section>
 }
 
 function HomeAppointments({ appointments, reference }: { appointments: Appointment[]; reference: Date }) {
