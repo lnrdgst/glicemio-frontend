@@ -6,6 +6,12 @@ const start = Date.parse('2026-10-23T12:00:00Z'), minute = 60_000
 const meal: Meal = { id: 'meal', kind: 'Almoço', at: new Date(start).toISOString(), timeReference: 'meal_start', createdAt: '2000-01-01T00:00:00Z', updatedAt: '2000-01-01T00:00:00Z' }
 const select = (elapsed: number, glucose: { at: string }[] = [], meals = [meal]) => selectPostMealReminder({ meals, glucose, now: start + elapsed, enabled: true })
 describe('política de UX do lembrete pós-refeição', () => {
+  it('ignora refeições excluídas na seleção e no agendamento, inclusive após reabertura', () => {
+    const deleted = { ...meal, deletedAt: new Date(start).toISOString() }
+    expect(select(150 * minute, [], [JSON.parse(JSON.stringify(deleted))])).toBeUndefined()
+    expect(nextPostMealCheck([deleted], start + postMealWindow.showFrom - 1)).toBe(30_000)
+    expect(select(150 * minute, [], [deleted, { ...meal, id: 'ativa' }])?.id).toBe('ativa')
+  })
   it.each([[0, false], [120 * minute - 1, false], [120 * minute, true], [150 * minute, true], [180 * minute - 1, true], [180 * minute, false], [240 * minute, false]] as const)('em %s ms, elegível: %s', (elapsed, shown) => {
     expect(Boolean(select(elapsed))).toBe(shown)
   })

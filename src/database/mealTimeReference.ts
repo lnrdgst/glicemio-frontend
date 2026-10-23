@@ -8,7 +8,7 @@ const canonical = (value: unknown): string => {
   return JSON.stringify(value) ?? 'null'
 }
 const signature = (data: BackupData) => canonical(Object.fromEntries(backupTables.map(table => [table, [...data[table]].sort((a, b) => a.id.localeCompare(b.id))])))
-const unconfirmed = (meal: Meal) => meal.timeReference === undefined || meal.timeReference === 'unconfirmed'
+const unconfirmed = (meal: Meal) => !meal.deletedAt && (meal.timeReference === undefined || meal.timeReference === 'unconfirmed')
 function assertIntegrity(data: BackupData) {
   parseBackup(JSON.stringify(data))
   if (backupIntegrityErrors(data).length) throw new Error('Há referências ausentes nos dados. A classificação foi bloqueada; nenhum registro foi alterado.')

@@ -22,7 +22,7 @@ export function suggestedMealKind(localDateTime: string) {
 }
 export function recentMeal(meals: Meal[], at: string) {
   const measured = new Date(at).getTime()
-  return meals.filter(meal => { const elapsed = measured - new Date(meal.at).getTime(); return elapsed >= 0 && elapsed <= 3 * 60 * 60 * 1000 })
+  return meals.filter(meal => { const elapsed = measured - new Date(meal.at).getTime(); return !meal.deletedAt && elapsed >= 0 && elapsed <= 3 * 60 * 60 * 1000 })
     .sort((a, b) => +new Date(b.at) - +new Date(a.at))[0]
 }
 export function glucoseContextSuggestion(meals: Meal[], workouts: Workout[], at: string): 'Após refeição' | 'Após treino' | undefined {
@@ -41,6 +41,7 @@ export function glucoseContextSuggestion(meals: Meal[], workouts: Workout[], at:
   return new Date(meal.at).getTime() >= new Date(workout.endedAt!).getTime() ? 'Após refeição' : 'Após treino'
 }
 export function mealAssociationOptions(meals: Meal[], at: string, preservedMealId?: string) {
+  meals = meals.filter(meal => !meal.deletedAt)
   const atTime = new Date(at).getTime()
   const recent = Number.isFinite(atTime) ? meals.filter(meal => new Date(meal.at).getTime() <= atTime).sort((first, second) => +new Date(second.at) - +new Date(first.at)).slice(0, 3) : []
   const preserved = preservedMealId ? meals.find(meal => meal.id === preservedMealId) : undefined

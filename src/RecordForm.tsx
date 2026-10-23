@@ -52,7 +52,7 @@ export function RecordForm({ kind }: { kind: RecordKind }) {
 function ClinicalRecordForm({ kind }: { kind: Exclude<RecordKind, 'refeicao'> }) {
   const { id: editId } = useParams(); const nav = useNavigate(); const [params] = useSearchParams(); const editing = Boolean(editId); const table = tables[kind]
   const { run, saving, error } = usePersistence(); const existing = useLiveQuery(() => editId ? db.table(table).get(editId).then(value => value ?? null) : Promise.resolve(null), [editId, table]) as any
-  const meals = useLiveQuery(() => db.meals.orderBy('at').reverse().toArray(), []) ?? []; const applications = useLiveQuery(() => db.insulin.orderBy('at').reverse().toArray(), []) ?? []; const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().toArray(), []) ?? []; const profile = useLiveQuery(() => db.profiles.get('local'), [])
+  const meals = useLiveQuery(() => db.meals.orderBy('at').reverse().filter(meal => !meal.deletedAt).toArray(), []) ?? []; const applications = useLiveQuery(() => db.insulin.orderBy('at').reverse().toArray(), []) ?? []; const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().toArray(), []) ?? []; const profile = useLiveQuery(() => db.profiles.get('local'), [])
   const [at, setAt] = useState(() => kind === 'consulta' ? '' : localInput()); const [context, setContext] = useState('Não informado'); const [contextTouched, setContextTouched] = useState(false); const [linkedMealId, setLinkedMealId] = useState(''); const [associationConfirmed, setAssociationConfirmed] = useState(false)
   const [insulinKind, setInsulinKind] = useState<Insulin['kind']>('Rápida'); const [medicationId, setMedicationId] = useState(''); const [medicationTouched, setMedicationTouched] = useState(false); const [otherName, setOtherName] = useState(''); const [dose, setDose] = useState(''); const [doseConfirmed, setDoseConfirmed] = useState(false); const [mealId, setMealId] = useState('')
   const [attendanceType, setAttendanceType] = useState(existing?.attendanceType || ''); const [attendanceTypeOther, setAttendanceTypeOther] = useState(existing?.attendanceTypeOther || '')
@@ -77,7 +77,15 @@ function ClinicalRecordForm({ kind }: { kind: Exclude<RecordKind, 'refeicao'> })
     else if (kind === 'treino') { const name = cleanName(activity); if (!name) throw new ValidationError('Informe uma atividade.'); const endedAt = endTime ? toIso(`${endDate}T${endTime}`) : undefined; if (endedAt && endedAt < effectiveAt) throw new ValidationError('O término não pode anteceder o início. Confira também a data de término.'); update = { activity: name, startedAt: effectiveAt, endedAt, note: text('note') || undefined } }
     else { if (attendanceType === 'other' && !attendanceTypeOther.trim()) throw new ValidationError('Informe o tipo de atendimento.'); update = { at: effectiveAt, attendanceType: attendanceType || undefined, attendanceTypeOther: attendanceType === 'other' ? attendanceTypeOther.trim() : undefined, professional: text('professional') || undefined, location: text('location') || undefined, note: text('note') || undefined } }
     const recordTable = (db as any)[table]
-    if (existing) await recordTable.put({ ...existing, ...update, updatedAt: now() }); else await recordTable.add(stamp(update))
+    const persist = async () => {
+      if ('mealId' in update && typeof update.mealId === 'string' && update.mealId !== existing?.mealId) {
+        const linked = await db.meals.get(update.mealId)
+        if (!linked || linked.deletedAt) throw new ValidationError('A refeição selecionada não está mais disponível. Confira a associação antes de salvar.')
+      }
+      if (existing) await recordTable.put({ ...existing, ...update, updatedAt: now() }); else await recordTable.add(stamp(update))
+    }
+    if (kind === 'glicemia' || kind === 'insulina') await db.transaction('rw', [recordTable, db.meals], persist)
+    else await persist()
     nav('/', { replace: true, state: { success: editing ? 'Alterações salvas neste dispositivo.' : 'Registro salvo neste dispositivo.' } })
   }) }
   const canLeave = () => !dirty || window.confirm('Há alterações não salvas. Deseja sair sem salvar?')

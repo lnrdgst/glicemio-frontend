@@ -4,6 +4,11 @@ import { stamp } from '../database/db'
 import { duration, iso, localInput } from './format'
 
 describe('regras locais', () => {
+  it('não sugere nem oferece associação a refeição excluída, mesmo com UUID preservado', () => {
+    const deleted = { ...stamp({ kind: 'Almoço', at: iso('2026-10-14T12:00') }), deletedAt: '2026-10-15T00:00:00Z' }
+    expect(recentMeal([deleted], iso('2026-10-14T13:00'))).toBeUndefined()
+    expect(mealAssociationOptions([deleted], iso('2026-10-14T13:00'), deleted.id)).toEqual([])
+  })
   it('mantém identidades estáveis do catálogo, sem misturas', () => {
     expect(insulinCatalog).toHaveLength(20)
     expect(new Set(insulinCatalog.map(x => x.id)).size).toBe(20)

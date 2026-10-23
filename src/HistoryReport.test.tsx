@@ -72,8 +72,10 @@ it('aplica filtros antes da paginação e preserva a abertura dos detalhes', asy
   open('/historico'); await screen.findByRole('link', { name: /100 mg\/dL/ })
   await userEvent.click(screen.getByRole('button', { name: 'Refeições' }))
   expect(await screen.findByRole('link', { name: /Almoço/ })).toBeInTheDocument()
-  expect(screen.queryByRole('link', { name: /100 mg\/dL/ })).toBeNull()
-  expect(screen.queryByRole('button', { name: 'Carregar registros anteriores' })).toBeNull()
+  await waitFor(() => {
+    expect(screen.queryByRole('link', { name: /100 mg\/dL/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Carregar registros anteriores' })).toBeNull()
+  })
   await userEvent.click(screen.getByRole('link', { name: /Almoço/ }))
   expect(await screen.findByRole('link', { name: 'Editar' })).toHaveAttribute('href', `/refeicao/${meal.id}/editar`)
 })

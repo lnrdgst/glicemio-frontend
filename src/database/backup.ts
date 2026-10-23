@@ -21,7 +21,7 @@ function validate(table: BackupTable, record: unknown) {
   if (table === 'mealItems') return isMealItem(record)
   if (!object(record) || !base(record)) return false
   if (table === 'profiles') return record.id === 'local' && text(record.name) && (record.postMealReminderEnabled === undefined || typeof record.postMealReminderEnabled === 'boolean') && (record.diagnosis === undefined || typeof record.diagnosis === 'string') && (record.workoutActivities === undefined || (list(record.workoutActivities) && record.workoutActivities.every(value => typeof value === 'string')))
-  if (table === 'meals') return text(record.kind) && date(record.at) && (record.description === undefined || typeof record.description === 'string') && (record.timeReference === undefined || record.timeReference === 'meal_start' || record.timeReference === 'meal_end' || record.timeReference === 'unconfirmed')
+  if (table === 'meals') return text(record.kind) && date(record.at) && (record.description === undefined || typeof record.description === 'string') && (record.timeReference === undefined || record.timeReference === 'meal_start' || record.timeReference === 'meal_end' || record.timeReference === 'unconfirmed') && (record.deletedAt === undefined || (date(record.deletedAt) && Date.parse(record.deletedAt as string) >= Date.parse(record.createdAt as string) && Date.parse(record.deletedAt as string) <= Date.parse(record.updatedAt as string)))
   if (table === 'glucose') { const value = record.value; return typeof value === 'number' && number(value) && value > 0 && date(record.at) && (record.mealId === undefined || text(record.mealId)) && (record.episodeId === undefined || text(record.episodeId)) }
   if (table === 'insulin') { const dose = record.dose; return (record.kind === 'Rápida' || record.kind === 'Basal/lenta') && typeof dose === 'number' && number(dose) && dose > 0 && date(record.at) && (record.mealId === undefined || text(record.mealId)) }
   if (table === 'workouts') return text(record.activity) && date(record.startedAt) && (record.endedAt === undefined || date(record.endedAt))
@@ -57,11 +57,14 @@ function relationshipErrors(data: BackupData, existing: BackupData) {
   const mealIds = new Set([...data.meals, ...existing.meals].map(record => record.id))
   const episodeIds = new Set([...data.episodes, ...existing.episodes].map(record => record.id))
   const foodIds = new Set([...data.foods, ...existing.foods].map(record => record.id))
+  const effectiveMeals = new Map([...data.meals, ...existing.meals].map(record => [record.id, record]))
   const errors: string[] = []
+  for (const record of [...data.glucose, ...data.insulin]) if (record.mealId && effectiveMeals.get(record.mealId)?.deletedAt) errors.push(`Registro clínico ${record.id} referencia uma refeição excluída.`)
   for (const record of data.glucose) { if (record.mealId && !mealIds.has(record.mealId)) errors.push(`Glicemia ${record.id} referencia uma refeição inexistente.`); if (record.episodeId && !episodeIds.has(record.episodeId)) errors.push(`Glicemia ${record.id} referencia um episódio inexistente.`) }
   for (const record of data.insulin) if (record.mealId && !mealIds.has(record.mealId)) errors.push(`Insulina ${record.id} referencia uma refeição inexistente.`)
   for (const record of data.mealItems) {
     if (!mealIds.has(record.mealId)) errors.push(`Item ${record.id} referencia uma refeição inexistente.`)
+    if (!record.deletedAt && effectiveMeals.get(record.mealId)?.deletedAt) errors.push(`Item ativo ${record.id} referencia uma refeição excluída.`)
     if (record.foodId && !foodIds.has(record.foodId)) errors.push(`Item ${record.id} referencia um alimento inexistente.`)
   }
   const existingMeals = new Map(existing.meals.map(meal => [meal.id, meal]))

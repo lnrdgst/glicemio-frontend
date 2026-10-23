@@ -24,7 +24,7 @@ export function MealRecordForm() {
   }, [id, attempt])
   if (id && loaded?.id !== id) return <Layout><h1>Carregando registro…</h1></Layout>
   if (id && loaded?.error) return <Layout><Link to="/historico">← Voltar</Link><p role="alert">Não foi possível carregar a refeição e seus alimentos.</p><button type="button" className="secondary" onClick={() => { setLoaded(undefined); retry(value => value + 1) }}>Tentar novamente</button></Layout>
-  if (id && !loaded?.meal) return <Layout><Link to="/historico" className="muted">← Voltar</Link><section className="card"><h1>Registro não encontrado</h1></section></Layout>
+  if (id && (!loaded?.meal || loaded.meal.deletedAt)) return <Layout><Link to="/historico" className="muted">← Voltar</Link><section className="card"><h1>Registro não encontrado</h1></section></Layout>
   return <MealForm key={id ?? 'new'} original={id ? loaded?.meal : undefined} originalItems={id ? loaded!.items : []} />
 }
 

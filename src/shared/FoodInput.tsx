@@ -2,21 +2,19 @@ import { useEffect, useId, useState } from 'react'
 import type { Food } from '../database/db'
 import { normalizedName } from './records'
 
-export function FoodInput({ value, foods, onChange, onSelect, onCreate }: {
-  value: string; foods: Food[]; onChange: (value: string) => void; onSelect: (food: Food) => void; onCreate: () => void
+export function FoodInput({ value, foods, onChange, onSelect }: {
+  value: string; foods: Food[]; onChange: (value: string) => void; onSelect: (food: Food) => void
 }) {
   const [open, setOpen] = useState(false), [active, setActive] = useState(-1)
   const listId = useId()
   const matches = foods.filter(food => !food.deletedAt && normalizedName(food.name).includes(normalizedName(value))).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR') || a.id.localeCompare(b.id)).slice(0, 8)
-  const canCreate = Boolean(value.trim()) && value.trim().length <= 200
-  const count = matches.length + Number(canCreate), expanded = open && count > 0
+  const count = matches.length, expanded = open && count > 0
   useEffect(() => {
     if (expanded && active >= 0 && active < count) document.getElementById(`${listId}-${active}`)?.scrollIntoView?.({ block: 'nearest' })
   }, [expanded, active, count, listId])
   const close = () => { setOpen(false); setActive(-1) }
   const choose = (index: number) => {
-    if (index < matches.length) onSelect(matches[index])
-    else onCreate()
+    onSelect(matches[index])
     close()
   }
   return <div className="suggestions food-suggestions">
@@ -32,8 +30,7 @@ export function FoodInput({ value, foods, onChange, onSelect, onCreate }: {
         if (event.key === 'Enter' && expanded) { event.preventDefault(); if (active >= 0 && active < count) choose(active); else close() }
       }} /></label>
     {expanded && <ul id={listId} role="listbox" aria-label="Sugestões de alimentos">
-      {matches.map((food, index) => <li key={food.id} id={`${listId}-${index}`} role="option" aria-selected={index === active} onMouseDown={event => event.preventDefault()} onClick={() => choose(index)}>{food.name}</li>)}
-      {canCreate && <li id={`${listId}-${matches.length}`} role="option" aria-selected={active === matches.length} onMouseDown={event => event.preventDefault()} onClick={() => choose(matches.length)}>Cadastrar “{value.trim()}” no catálogo</li>}
+      {matches.map((food, index) => <li key={food.id} id={`${listId}-${index}`} role="option" aria-selected={index === active} onPointerDown={event => event.preventDefault()} onMouseDown={event => event.preventDefault()} onClick={() => choose(index)}>{food.name}</li>)}
     </ul>}
   </div>
 }

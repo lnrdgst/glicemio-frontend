@@ -135,8 +135,9 @@ describe('data e hora nativas separadas', () => {
       expect(localInput(recorded.at)).toBe('2026-10-11T23:55')
       open('/historico')
       const row = (await screen.findByText(/Almoço/)).closest('.item') as HTMLElement
-      expect(within(row).getByText(`${time(recorded.at)} · Almoço`)).toBeInTheDocument()
-      expect(screen.getByText(/11\/10\/2026/)).toBeInTheDocument()
+      expect(within(row).getByText('Almoço')).toBeInTheDocument()
+      expect(within(row).getByText(new RegExp(time(recorded.at)))).toBeInTheDocument()
+      expect(within(row).getByText(/11\/10\/2026/)).toBeInTheDocument()
     } finally { reopened.close() }
   })
 

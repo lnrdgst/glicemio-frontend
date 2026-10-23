@@ -44,8 +44,8 @@ it('cadastra vários alimentos com decimais exatos e mostra nomes e unidades nos
   expect(meal).toMatchObject({ kind: 'Almoço', timeReference: 'meal_start', description: 'Descrição livre preservada' })
   expect(items.find(item => item.foodName === 'Arroz')).toMatchObject({ mealId: meal.id, quantity: '0.5', unit: 'cup' })
   expect(items.find(item => item.foodName === 'Feijão')?.quantity).toBe('999999999999.999999')
-  expect(items.every(item => item.foodId === undefined)).toBe(true)
-  expect(await db.foods.count()).toBe(0)
+  expect(items.every(item => typeof item.foodId === 'string')).toBe(true)
+  expect(await db.foods.count()).toBe(2)
   await userEvent.click(screen.getByRole('link', { name: /Almoço.*Início da refeição/ }))
   const summary = await screen.findByRole('region', { name: 'Alimentos consumidos' })
   expect(within(summary).getByText('Arroz')).toBeInTheDocument()
@@ -71,24 +71,22 @@ it('sugere sem distinguir caixa ou acentos, permite teclado e não preenche quan
   expect(await db.foods.count()).toBe(3)
 })
 
-it('cadastra alimento explicitamente sem fundir nomes semelhantes e grava só ao salvar', async () => {
+it('reutiliza correspondência exata única automaticamente, sem gravar catálogo antes de salvar', async () => {
   const existing = stamp({ name: 'Arroz', revision: 1 }); await db.foods.add(existing)
   open(); change('Tipo de refeição', 'Almoço')
   const group = await add(); fill(group, 'arroz', '2', 'portion')
-  await userEvent.click(within(group).getByRole('option', { name: 'Cadastrar “arroz” no catálogo' }))
   expect(await db.foods.count()).toBe(1)
-  expect(within(group).getByText(/será cadastrado ao salvar/)).toBeInTheDocument()
+  expect(within(group).getByText(/Ao salvar/)).toBeInTheDocument()
   await save(); await saved()
   const foods = await db.foods.toArray(), item = (await db.mealItems.toArray())[0]
-  expect(foods).toHaveLength(2)
-  expect(item.foodId).not.toBe(existing.id)
-  expect(foods.find(food => food.id === item.foodId)?.name).toBe('arroz')
+  expect(foods).toHaveLength(1)
+  expect(item.foodId).toBe(existing.id)
+  expect(foods.find(food => food.id === item.foodId)?.name).toBe('Arroz')
 })
 
 it('remove rascunho antes de salvar sem criar alimento órfão e aceita somente descrição', async () => {
   open(); change('Tipo de refeição', 'Jantar')
   const group = await add(); fill(group, 'Novo alimento', '2', 'tbsp')
-  await userEvent.click(within(group).getByRole('option', { name: /Cadastrar/ }))
   await userEvent.click(screen.getByRole('button', { name: 'Remover alimento 1' }))
   change('Descrição (opcional)', 'Somente descrição')
   await save(); await saved()
@@ -143,7 +141,6 @@ it('remover item salvo mantém histórico no banco e no backup, sem apagar o ali
 it('faz rollback de catálogo, refeição e itens, mantém rascunho e permite tentar novamente', async () => {
   open(); change('Tipo de refeição', 'Almoço')
   const group = await add(); fill(group, 'Alimento novo', '0,5', 'cup')
-  await userEvent.click(within(group).getByRole('option', { name: /Cadastrar/ }))
   const before = await snapshot()
   vi.spyOn(db.mealItems, 'bulkPut').mockRejectedValueOnce(new Error('Falha sintética'))
   await save()
@@ -188,7 +185,6 @@ it('rollback de edição desfaz até escritas já realizadas de catálogo, refei
   open(`/refeicao/${meal.id}/editar`)
   await userEvent.click(await screen.findByRole('button', { name: 'Remover alimento 1' }))
   const group = await add(); fill(group, 'Novo', '2', 'portion')
-  await userEvent.click(within(group).getByRole('option', { name: /Cadastrar/ }))
   change('Descrição (opcional)', 'Não deve persistir após falha')
   const before = await snapshot(), write = db.mealItems.bulkPut.bind(db.mealItems)
   vi.spyOn(db.mealItems, 'bulkPut').mockImplementationOnce(records => write(records).then(() => { throw new Error('Falha após escrever itens') }))
@@ -212,7 +208,6 @@ it('salva offline sem API e exporta/restaura o formulário completo com backup v
   const request = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Offline sintético'))
   const view = open(); change('Tipo de refeição', 'Almoço')
   const group = await add(); fill(group, 'Feijão', '1.25', 'tbsp')
-  await userEvent.click(within(group).getByRole('option', { name: /Cadastrar/ }))
   await save(); await saved()
   expect(request).not.toHaveBeenCalled()
   const backup = await exportBackup(), meal = backup.data.meals[0]
@@ -239,7 +234,6 @@ it.each(['0', '-1', '0.0000001', '1e3', '1000000000000'])('rejeita quantidade %s
 it('pede confirmação ao sair com alimento novo pendente e cancelar não grava catálogo', async () => {
   const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
   open(); const group = await add(); fill(group, 'Alimento pendente', '1', 'unit')
-  await userEvent.click(within(group).getByRole('option', { name: /Cadastrar/ }))
   await userEvent.click(screen.getByRole('link', { name: 'Histórico' }))
   expect(confirm).toHaveBeenCalled(); expect(screen.getByRole('heading', { name: 'Registrar refeição' })).toBeInTheDocument()
   confirm.mockReturnValue(true)
@@ -248,24 +242,22 @@ it('pede confirmação ao sair com alimento novo pendente e cancelar não grava 
   expect(await db.foods.count()).toBe(0); expect(await db.meals.count()).toBe(0)
 })
 
-it.each(['alimentos', 'insulina', 'múltiplos'] as const)('informa o bloqueio por %s nos detalhes e preserva todos os registros', async dependency => {
+it.each(['insulina', 'múltiplos'] as const)('informa o bloqueio por %s nos detalhes e preserva todos os registros', async dependency => {
   const meal = stamp({ kind: 'Almoço', at: historicalAt })
   await db.meals.add(meal)
   if (dependency !== 'insulina') await db.mealItems.add(stamp({ mealId: meal.id, foodName: 'Arroz', quantity: '1', unit: 'g' as const, revision: 1 }))
-  if (dependency !== 'alimentos') await db.insulin.add(stamp({ at: historicalAt, kind: 'Rápida' as const, dose: 1, mealId: meal.id }))
+  await db.insulin.add(stamp({ at: historicalAt, kind: 'Rápida' as const, dose: 1, mealId: meal.id }))
   if (dependency === 'múltiplos') await db.glucose.add(stamp({ at: historicalAt, value: 123, mealId: meal.id }))
   const before = await snapshot()
   open(`/detalhes/meals/${meal.id}`)
   await userEvent.click(await screen.findByRole('button', { name: 'Excluir' }))
-  await userEvent.click(screen.getByRole('button', { name: 'Excluir registro' }))
   const alert = await screen.findByRole('alert')
-  if (dependency === 'alimentos') expect(alert).toHaveTextContent('alimentos registrados no histórico')
-  else if (dependency === 'insulina') expect(alert).toHaveTextContent('Esta refeição está associada a registros de insulina e não pode ser excluída.')
+  expect(screen.queryByRole('alertdialog')).toBeNull()
+  if (dependency === 'insulina') expect(alert).toHaveTextContent('Esta refeição está associada a registros de insulina e não pode ser excluída.')
   else {
-    expect(alert).toHaveTextContent('múltiplas dependências')
-    expect(alert).toHaveTextContent('alimentos registrados no histórico')
-    expect(alert).toHaveTextContent('medições de glicemia vinculadas')
-    expect(alert).toHaveTextContent('registros de insulina vinculados')
+    expect(alert).toHaveTextContent('medições de glicemia e registros de insulina')
+    expect(alert).toHaveTextContent('medições de glicemia')
+    expect(alert).toHaveTextContent('registros de insulina')
   }
   expect(screen.getByRole('heading', { name: 'Refeição' })).toBeInTheDocument()
   expect(screen.queryByText('Registro excluído deste dispositivo.')).toBeNull()

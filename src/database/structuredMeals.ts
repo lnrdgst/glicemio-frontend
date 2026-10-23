@@ -60,7 +60,7 @@ export async function saveMealWithItems(meal: Meal, items: MealItem[], expectedM
   if (!items.every(isMealItem) || items.some(item => item.mealId !== meal.id) || new Set(items.map(item => item.id)).size !== items.length) throw new Error('Itens ou referências da refeição inválidos.')
   return db.transaction('rw', [db.meals, db.mealItems, db.foods], async () => {
     const previousMeal = await db.meals.get(meal.id)
-    if (previousMeal ? !expectedMeal || !sameRecord(previousMeal, expectedMeal) : expectedMeal !== undefined) throw new Error('Conflito na refeição. Releia o registro antes de salvar.')
+    if (meal.deletedAt || previousMeal?.deletedAt || (previousMeal ? !expectedMeal || !sameRecord(previousMeal, expectedMeal) : expectedMeal !== undefined)) throw new Error('Conflito na refeição. Releia o registro antes de salvar.')
     if (previousMeal && (meal.createdAt !== previousMeal.createdAt || instant(meal.updatedAt)! < instant(previousMeal.updatedAt)!)) throw new Error('Metadados da refeição não podem retroceder.')
     for (const item of items) {
       const previous = await db.mealItems.get(item.id)

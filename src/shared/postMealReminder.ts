@@ -19,7 +19,7 @@ export function selectPostMealReminder({ meals, glucose, now, enabled = true, di
   if (!enabled || !Number.isFinite(now)) return undefined
   const latest = meals.flatMap(meal => {
     const start = reminderInstant(meal.at)
-    return meal.timeReference === 'meal_start' && start !== undefined && now - start >= postMealWindow.showFrom && now - start < postMealWindow.hideFrom ? [{ meal, start }] : []
+    return !meal.deletedAt && meal.timeReference === 'meal_start' && start !== undefined && now - start >= postMealWindow.showFrom && now - start < postMealWindow.hideFrom ? [{ meal, start }] : []
   }).sort((a, b) => b.start - a.start || a.meal.id.localeCompare(b.meal.id))[0]
   // Não encadeie avisos mais antigos após dispensar o mais recente.
   if (!latest || dismissedIds?.has(latest.meal.id)) return undefined
@@ -33,7 +33,7 @@ export function selectPostMealReminder({ meals, glucose, now, enabled = true, di
 export function nextPostMealCheck(meals: Meal[], now: number) {
   let delay = 30_000
   for (const meal of meals) {
-    if (meal.timeReference !== 'meal_start') continue
+    if (meal.deletedAt || meal.timeReference !== 'meal_start') continue
     const start = reminderInstant(meal.at)
     if (start === undefined) continue
     for (const boundary of [postMealWindow.showFrom, postMealWindow.hideFrom]) {

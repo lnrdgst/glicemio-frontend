@@ -15,6 +15,15 @@ button:disabled { cursor: wait; opacity: .65; }
 .meal-item { border:1px solid #4d443e; border-radius:12px; margin:16px 0; padding:0 12px 10px; }
 .meal-item > legend { color:var(--color-muted); font-size:.85rem; padding:0 6px; }
 .meal-item-amount { display:grid; gap:10px; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); }
+.meal-item-amount:has(.decimal-keypad) { grid-template-columns:minmax(0, 1fr); }
+.meal-quantity-control { min-width:0; }
+.decimal-keypad { border:1px solid #4d443e; border-radius:12px; margin-top:8px; padding:8px; }
+.decimal-keypad-digits { display:grid; gap:6px; grid-template-columns:repeat(3, minmax(0, 1fr)); }
+.decimal-keypad button { min-height:44px; min-width:0; padding:8px; }
+.decimal-keypad-digits button { color:var(--quick-meal); font-size:1.1rem; }
+.decimal-keypad-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.decimal-keypad-actions button { flex:1 1 90px; font-size:.8rem; }
+.quantity-error { font-size:.8rem; margin:6px 0; }
 .meal-item-footer { align-items:center; display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:10px; }
 .meal-item-footer > .muted { flex:1 1 150px; font-size:.78rem; margin:0; }
 .meal-item-footer > button, .meal-add-item { align-items:center; display:inline-flex; gap:6px; justify-content:center; min-height:44px; }
@@ -108,6 +117,14 @@ select.field { text-overflow: ellipsis; }
 .glucose-insulin-after { font-style:italic; }
 .glucose-insulin-context-line strong { color:#A99BCB; white-space:nowrap; }
 .home-list-item { display:flex; color:inherit; text-decoration:none; padding:8px 0; }
+.meal-list-item { display:block; }
+.meal-list-item + .meal-list-item { border-top:1px solid #4c3640; }
+.meal-record-info { display:grid; gap:3px; min-width:0; }
+.meal-record-info > strong { color:var(--quick-meal); }
+.meal-record-info > .muted { font-size:.82rem; margin:0; }
+.meal-record-info > .meal-time-reference { font-size:.78rem; }
+.meal-history-item { border-bottom:1px solid #4c3640; margin-bottom:10px; padding-bottom:10px; }
+.meal-history-item:last-child { border-bottom:0; }
 .home-appointment { align-items:center; color:inherit; display:flex; gap:12px; justify-content:space-between; overflow-wrap:anywhere; padding:10px 0; text-decoration:none; }
 .home-appointment + .home-appointment { border-top:1px solid #39322e; }
 .home-appointment > div { min-width:0; }
@@ -139,6 +156,17 @@ select.field { text-overflow: ellipsis; }
 .details-actions .primary, .details-actions .danger { align-items:center; display:inline-flex; gap:7px; justify-content:center; min-height:44px; text-decoration:none; }
 .details-actions .danger { color:#ffb5a7; }
 .details-delete { margin-left:auto; }
+.details-actions { flex-wrap:wrap; }
+.details-delete { min-width:0; max-width:100%; }
+.details-delete > p { font-size:.85rem; max-width:32rem; overflow-wrap:anywhere; }
+.confirmation-modal { position:fixed; background:var(--color-panel); border:1px solid #574c46; border-radius:18px; color:#f9f5f1; inset:0; margin:auto; max-height:calc(100dvh - 32px); max-width:420px; overflow:auto; overflow-wrap:anywhere; padding:20px; width:calc(100% - 32px); }
+.confirmation-modal::backdrop { background:#000b; }
+.confirmation-modal h2 { font-size:1.1rem; margin:0 0 12px; }
+.confirmation-modal p { font-size:.9rem; line-height:1.45; }
+.confirmation-actions { display:grid; gap:10px; grid-template-columns:repeat(2, minmax(0, 1fr)); margin-top:20px; }
+.confirmation-actions button { min-height:48px; min-width:0; white-space:normal; }
+.confirmation-actions .danger { border:1px solid #8b4a47; border-radius:14px; }
+@media (max-width:360px) { .confirmation-actions { grid-template-columns:minmax(0, 1fr); } }
 .details .delete-confirm { display:grid; gap:8px; max-width:280px; }
 .details .delete-confirm p { margin:0; }
 .details .delete-confirm .actions { justify-content:flex-end; margin-top:4px; }

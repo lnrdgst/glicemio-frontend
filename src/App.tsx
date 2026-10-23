@@ -11,7 +11,9 @@ import { BrandLogo } from './shared/BrandLogo'
 import { MealTimeReferenceReview } from './MealTimeReferenceReview'
 import { PostMealReminder } from './PostMealReminder'
 import { MealItemsSummary } from './MealItemsSummary'
-import { deleteMealIfUnreferenced, MealFormError } from './database/mealForm'
+import { MealRecordInfo } from './shared/MealRecordInfo'
+import { ConfirmDialog } from './shared/ConfirmDialog'
+import { deleteMeal, mealDeletionBlockReason, MealFormError } from './database/mealForm'
 import { mealTimeReferenceLabel } from './shared/meals'
 import { MealTimeReferenceNote } from './shared/MealTimeReferenceNote'
 import { insulinName } from './shared/records'
@@ -53,10 +55,11 @@ const detailsFor: Record<string, { title: string; edit: string }> = {
 const attendanceLabel = (record: any) => (record.attendanceType === 'other' ? record.attendanceTypeOther || 'Outro' : ({ general: 'Clínico geral', endocrinologist: 'Endocrinologista', nutritionist: 'Nutricionista', ophthalmologist: 'Oftalmologista' } as Record<string, string>)[record.attendanceType] || '')
 const appointmentSummary = (record: any) => [attendanceLabel(record), record.professional].filter(Boolean).join(' · ') || 'Profissional não informado'
 
-function Delete({ run, onDeleted }: { run: () => Promise<void>; onDeleted: () => void }) {
+function Delete({ run, onDeleted, check, meal = false }: { run: () => Promise<void>; onDeleted: () => void; check?: () => Promise<string | undefined>; meal?: boolean }) {
   const { run: persist, saving, error } = usePersistence('Não foi possível excluir o registro. Tente novamente.'); const [confirming, setConfirming] = useState(false)
   const remove = () => void persist(async () => { await run(); onDeleted() })
-  return <span className="details-delete">{confirming ? <div className="delete-confirm" role="alertdialog" aria-modal="true" aria-labelledby="delete-record-title"><p id="delete-record-title"><b>Excluir este registro?</b></p><p className="muted">Esta ação não poderá ser desfeita.</p><div className="actions"><button type="button" className="secondary" disabled={saving} onClick={() => setConfirming(false)}>Cancelar</button><button type="button" className="danger" disabled={saving} onClick={remove}><Trash2 size={18} aria-hidden="true" />{saving ? 'Excluindo…' : 'Excluir registro'}</button></div></div> : <button type="button" className="danger" onClick={() => setConfirming(true)}><Trash2 size={18} aria-hidden="true" />Excluir</button>}{error && <span role="alert">{error}</span>}</span>
+  const prepare = () => void persist(async () => { const reason = await check?.(); if (reason) throw new ValidationError(reason); setConfirming(true) })
+  return <div className="details-delete"><button type="button" className="danger" disabled={saving || confirming} onClick={prepare}><Trash2 size={18} aria-hidden="true" />Excluir</button>{confirming && <ConfirmDialog saving={saving} error={error} onCancel={() => setConfirming(false)} onConfirm={remove}>{meal && <p>A refeição e seus itens deixarão de aparecer nas listas. Os alimentos do catálogo e o histórico no backup serão preservados.</p>}</ConfirmDialog>}{error && !confirming && <p role="alert">{error}</p>}</div>
 }
 
 function Onboarding() {
@@ -69,8 +72,8 @@ function useProfile() { return useLiveQuery(() => db.profiles.get('local').then(
 function Home() {
   const location = useLocation(); const profile = useProfile()
   const glucose = useLiveQuery(() => db.glucose.orderBy('at').last(), [])
-  const linkedMeal = useLiveQuery(async () => glucose?.mealId ? db.meals.get(glucose.mealId) : undefined, [glucose?.mealId])
-  const meals = useLiveQuery(() => db.meals.orderBy('at').reverse().limit(3).toArray(), []) ?? []
+  const linkedMeal = useLiveQuery(async () => glucose?.mealId ? db.meals.get(glucose.mealId).then(meal => meal?.deletedAt ? undefined : meal) : undefined, [glucose?.mealId])
+  const meals = useLiveQuery(() => db.meals.orderBy('at').reverse().filter(meal => !meal.deletedAt).limit(3).toArray(), []) ?? []
   const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().limit(3).toArray(), []) ?? []
   const appointments = useLiveQuery(() => db.appointments.orderBy('at').toArray(), []) ?? []
   const insulin = useLiveQuery(() => db.insulin.orderBy('at').reverse().toArray(), []) ?? []
@@ -86,7 +89,7 @@ function Home() {
     <BasalReminder profile={profile} insulin={insulin} now={clock} />
     {glucose && glucoseState ? <section className="home-section glucose-section"><section className="home-record card glucose-card" style={{ '--glucose-status-color': glucoseState.color } as React.CSSProperties}><div className="glucose-card-heading"><HomeHistoryTitle tone="glucose" filter="glucose">Última medição</HomeHistoryTitle><AddRecordLink to="/glicemia" label="Registrar glicemia" tone="glucose" /></div><Link className="home-glucose-detail" to={`/detalhes/glucose/${glucose.id}`}><h2 style={{ fontSize: '2.3rem', margin: '6px 0' }}>{glucose.value} <small>mg/dL</small></h2><p className="muted glucose-card-date">{eventDateTime(glucose.at)}</p><p className="glucose-status">{glucoseState.label}</p>{glucoseContextLabel && <p className="muted">{glucoseContextLabel}</p>}</Link>{todayGlucose.length >= 2 && dailySummary && <DailyGlucoseSummary count={todayGlucose.length} summary={dailySummary} />}{glucoseGuidance && <p className="glucose-guidance">{glucoseGuidance}</p>}<GlucoseInsulinContext basal={insulinContext?.basal} rapid={insulinContext?.rapid} glucoseAt={glucose.at} /></section></section> : <section className="home-section glucose-section"><section className="card home-record glucose-empty-card"><div className="glucose-card-heading"><h2><HomeHistoryTitle tone="glucose" filter="glucose">Nenhuma medição ainda</HomeHistoryTitle></h2><AddRecordLink to="/glicemia" label="Registrar glicemia" tone="glucose" /></div><p className="muted">Registre seu primeiro Ponto para acompanhar seu contexto.</p><GlucoseInsulinContext basal={insulinContext?.basal} rapid={insulinContext?.rapid} /></section></section>}
     <PostMealReminder enabled={profile.postMealReminderEnabled !== false} />
-    <HomeList title="Últimas refeições" empty="Nenhuma refeição registrada." items={meals} render={(record: Meal) => <><span>{record.kind}</span><span className="muted">{eventDateTime(record.at)} · {mealTimeReferenceLabel(record)}</span></>} table="meals" filter="meals" createTo="/refeicao" createLabel="Registrar refeição" tone="meal" />
+    <HomeList title="Últimas refeições" empty="Nenhuma refeição registrada." items={meals} render={(record: Meal) => <MealRecordInfo meal={record} />} table="meals" filter="meals" createTo="/refeicao" createLabel="Registrar refeição" tone="meal" />
     <HomeList title="Últimos treinos" empty="Nenhum treino registrado." items={workouts} render={record => <><span>{record.activity}</span><span className="muted">{duration(record.startedAt, record.endedAt)}</span></>} table="workouts" filter="workouts" createTo="/treino" createLabel="Registrar treino" tone="workout" />
     <HomeAppointments appointments={upcomingAppointments} reference={clock} />
   </Layout>
@@ -116,7 +119,7 @@ function BasalReminder({ profile, insulin, now: current, fallback }: { profile: 
 }
 
 function HomeList({ title, empty, items, render, table, filter, createTo, createLabel, tone }: { title: string; empty: string; items: any[]; render: (item: any) => React.ReactNode; table: string; filter: 'meals' | 'workouts'; createTo: string; createLabel: string; tone: 'meal' | 'workout' }) {
-  return <section className="home-section"><div className="card home-list-card"><div className="home-card-heading"><h2><HomeHistoryTitle tone={tone} filter={filter}>{title}</HomeHistoryTitle></h2><AddRecordLink to={createTo} label={createLabel} tone={tone} /></div>{items.length ? items.map(item => <Link className="home-list-item row" key={item.id} to={`/detalhes/${table}/${item.id}`}>{render(item)}</Link>) : <p className="muted">{empty}</p>}</div></section>
+  return <section className="home-section"><div className="card home-list-card"><div className="home-card-heading"><h2><HomeHistoryTitle tone={tone} filter={filter}>{title}</HomeHistoryTitle></h2><AddRecordLink to={createTo} label={createLabel} tone={tone} /></div>{items.length ? items.map(item => <Link className={`home-list-item ${tone === 'meal' ? 'meal-list-item' : 'row'}`} key={item.id} to={`/detalhes/${table}/${item.id}`}>{render(item)}</Link>) : <p className="muted">{empty}</p>}</div></section>
 }
 
 function HomeAppointments({ appointments, reference }: { appointments: Appointment[]; reference: Date }) {
@@ -143,19 +146,19 @@ function Details() {
   const { table = '', id = '' } = useParams(); const nav = useNavigate(); const config = detailsFor[table]; const record = useLiveQuery(() => config ? db.table(table).get(id) : Promise.resolve(undefined), [table, id, config]) as any
   if (!config) return <Navigate to="/historico" replace />
   if (record === undefined) return <Layout><h1>Carregando registro…</h1></Layout>
-  if (!record) return <Layout><Link to="/" className="muted">← Início</Link><section className="card"><h1>Registro não encontrado</h1></section></Layout>
+  if (!record || (table === 'meals' && record.deletedAt)) return <Layout><Link to="/" className="muted">← Início</Link><section className="card"><h1>Registro não encontrado</h1></section></Layout>
   const at = record.at || record.startedAt
   const detail = table === 'glucose' ? `${record.value} mg/dL · ${record.context || 'Sem contexto'}` : table === 'insulin' ? `${insulinName(record) || record.kind} · ${record.dose.toLocaleString('pt-BR')} UI` : table === 'meals' ? record.kind : table === 'workouts' ? `${record.activity} · ${duration(record.startedAt, record.endedAt)}` : table === 'episodes' ? record.symptoms.join(', ') || 'Sem sintomas selecionados' : appointmentSummary(record)
   const remove = async () => {
     if (table !== 'meals') return db.table(table).delete(id)
-    try { await deleteMealIfUnreferenced(id) }
+    try { await deleteMeal(id) }
     catch (cause) { if (cause instanceof MealFormError) throw new ValidationError(cause.message); throw cause }
   }
-  return <Layout><Link to="/" className="muted">← Início</Link><section className={`card details details-${config.edit}`}><div className="details-heading"><h1 className="details-title">{config.title}</h1></div><div className="details-content"><p className="details-primary">{detail}</p><p>{eventDateTime(at)}</p>{table === 'meals' && <><p className="muted">{mealTimeReferenceLabel(record)}</p><MealTimeReferenceNote meal={record} /></>}{record.note && <p className="muted">{record.note}</p>}{record.description && <p className="muted">{record.description}</p>}{table === 'meals' && <MealItemsSummary mealId={record.id} />}</div><div className="details-actions"><Link className="primary details-edit" to={config.edit === 'episodio' ? `/episodio/${id}/editar` : `/${config.edit}/${id}/editar`}><Pencil size={18} aria-hidden="true" />Editar</Link><Delete run={remove} onDeleted={() => nav(`/historico?tipo=${table}`, { state: { success: 'Registro excluído deste dispositivo.' } })} /></div></section></Layout>
+  return <Layout><Link to="/" className="muted">← Início</Link><section className={`card details details-${config.edit}`}><div className="details-heading"><h1 className="details-title">{config.title}</h1></div><div className="details-content">{table === 'meals' ? <><MealRecordInfo meal={record} /><MealTimeReferenceNote meal={record} /></> : <><p className="details-primary">{detail}</p><p>{eventDateTime(at)}</p></>}{record.note && <p className="muted">{record.note}</p>}{record.description && <p className="muted">{record.description}</p>}{table === 'meals' && <MealItemsSummary mealId={record.id} />}</div><div className="details-actions"><Link className="primary details-edit" to={config.edit === 'episodio' ? `/episodio/${id}/editar` : `/${config.edit}/${id}/editar`}><Pencil size={18} aria-hidden="true" />Editar</Link><Delete run={remove} meal={table === 'meals'} check={table === 'meals' ? () => mealDeletionBlockReason(id) : undefined} onDeleted={() => nav(`/historico?tipo=${table}`, { state: { success: 'Registro excluído deste dispositivo.' } })} /></div></section></Layout>
 }
 
 type HistoryFilter = 'all' | 'glucose' | 'meals' | 'insulin' | 'workouts' | 'episodes' | 'appointments'
-type Line = { id: string; at: string; title: string; detail?: string; table: string; recordId: string }
+type Line = { id: string; at: string; title: string; detail?: string; table: string; recordId: string; meal?: Meal }
 const historyFilters: { value: HistoryFilter; label: string }[] = [{ value: 'all', label: 'Todos' }, { value: 'glucose', label: 'Glicemias' }, { value: 'meals', label: 'Refeições' }, { value: 'insulin', label: 'Insulinas' }, { value: 'workouts', label: 'Treinos' }, { value: 'episodes', label: 'Episódios' }, { value: 'appointments', label: 'Consultas' }]
 const sortLines = (lines: Line[]) => lines.sort((a, b) => +new Date(b.at) - +new Date(a.at) || a.table.localeCompare(b.table) || a.id.localeCompare(b.id))
 
@@ -166,19 +169,19 @@ function History() {
     const take = shown + 1
     const [glucose, meals, insulin, workouts, episodes, appointments] = await Promise.all([
       filter === 'all' || filter === 'glucose' ? db.glucose.orderBy('at').reverse().limit(take).toArray() : [],
-      filter === 'all' || filter === 'meals' ? db.meals.orderBy('at').reverse().limit(take).toArray() : [],
+      filter === 'all' || filter === 'meals' ? db.meals.orderBy('at').reverse().filter(meal => !meal.deletedAt).limit(take).toArray() : [],
       filter === 'all' || filter === 'insulin' ? db.insulin.orderBy('at').reverse().limit(take).toArray().then(records => subtype === 'basal' ? records.filter(record => record.kind === 'Basal/lenta') : subtype === 'rapida' ? records.filter(record => record.kind === 'Rápida') : records) : [],
       filter === 'all' || filter === 'workouts' ? db.workouts.orderBy('startedAt').reverse().limit(take).toArray() : [],
       filter === 'all' || filter === 'episodes' ? db.episodes.orderBy('startedAt').reverse().limit(take).toArray() : [],
       filter === 'all' || filter === 'appointments' ? db.appointments.orderBy('at').reverse().limit(take).toArray() : [],
     ])
-    const ordered = sortLines([...glucose.map(x => ({ id: x.id, recordId: x.id, at: x.at, title: `${x.value} mg/dL`, detail: x.context, table: 'glucose' })), ...meals.map(x => ({ id: x.id, recordId: x.id, at: x.at, title: x.kind, detail: [mealTimeReferenceLabel(x), x.description].filter(Boolean).join(' · '), table: 'meals' })), ...insulin.map(x => ({ id: x.id, recordId: x.id, at: x.at, title: `Insulina ${x.kind}`, detail: `${insulinName(x) ? `${insulinName(x)} · ` : ''}${x.dose.toLocaleString('pt-BR')} UI`, table: 'insulin' })), ...workouts.map(x => ({ id: x.id, recordId: x.id, at: x.startedAt, title: 'Treino', detail: x.activity, table: 'workouts' })), ...episodes.map(x => ({ id: x.id, recordId: x.id, at: x.startedAt, title: 'Episódio', detail: x.symptoms.join(', '), table: 'episodes' })), ...appointments.map(x => ({ id: x.id, recordId: x.id, at: x.at, title: 'Consulta', detail: appointmentSummary(x), table: 'appointments' }))])
+    const ordered = sortLines([...glucose.map(x => ({ id: x.id, recordId: x.id, at: x.at, title: `${x.value} mg/dL`, detail: x.context, table: 'glucose' })), ...meals.map(x => ({ id: x.id, recordId: x.id, at: x.at, meal: x, title: x.kind, detail: [mealTimeReferenceLabel(x), x.description].filter(Boolean).join(' · '), table: 'meals' })), ...insulin.map(x => ({ id: x.id, recordId: x.id, at: x.at, title: `Insulina ${x.kind}`, detail: `${insulinName(x) ? `${insulinName(x)} · ` : ''}${x.dose.toLocaleString('pt-BR')} UI`, table: 'insulin' })), ...workouts.map(x => ({ id: x.id, recordId: x.id, at: x.startedAt, title: 'Treino', detail: x.activity, table: 'workouts' })), ...episodes.map(x => ({ id: x.id, recordId: x.id, at: x.startedAt, title: 'Episódio', detail: x.symptoms.join(', '), table: 'episodes' })), ...appointments.map(x => ({ id: x.id, recordId: x.id, at: x.at, title: 'Consulta', detail: appointmentSummary(x), table: 'appointments' }))])
     return { lines: ordered.slice(0, shown), hasMore: ordered.length > shown }
   }, [filter, shown, subtype]) ?? { lines: [], hasMore: false }
   const { lines, hasMore } = history
   const groups = lines.reduce<{ key: string; title: string; lines: Line[] }[]>((days, line) => { const key = localDayKey(line.at); const current = days.at(-1); if (current?.key === key) current.lines.push(line); else days.push({ key, title: dayHeading(line.at), lines: [line] }); return days }, [])
   const changeFilter = (value: HistoryFilter) => { setSearch(value === 'all' ? {} : { tipo: value }); setShown(20) }
-  return <Layout>{location.state?.success && <p role="status">{location.state.success}</p>}<h1>Histórico</h1><div className="history-filters" role="group" aria-label="Filtrar histórico">{historyFilters.map(item => <button key={item.value} type="button" className={filter === item.value ? 'secondary active' : 'secondary'} onClick={() => changeFilter(item.value)}>{item.label}</button>)}</div>{lines.length ? <><div className="timeline">{groups.map(group => <section className="history-day" key={group.key}><h2>{group.title}</h2>{group.lines.map(line => <div className="item" key={`${line.table}-${line.id}`}><Link className="history-link" to={`/detalhes/${line.table}/${line.recordId}`}><b>{time(line.at)} · {line.title}</b>{line.detail && <span className="muted">{line.detail}</span>}</Link></div>)}</section>)}</div>{hasMore && <button className="secondary history-more" type="button" onClick={() => setShown(value => value + 20)}>Carregar registros anteriores</button>}</> : <section className="card"><p>Nenhum registro neste filtro.</p></section>}</Layout>
+  return <Layout>{location.state?.success && <p role="status">{location.state.success}</p>}<h1>Histórico</h1><div className="history-filters" role="group" aria-label="Filtrar histórico">{historyFilters.map(item => <button key={item.value} type="button" className={filter === item.value ? 'secondary active' : 'secondary'} onClick={() => changeFilter(item.value)}>{item.label}</button>)}</div>{lines.length ? <><div className="timeline">{groups.map(group => <section className="history-day" key={group.key}><h2>{group.title}</h2>{group.lines.map(line => <div className={`item ${line.meal ? 'meal-history-item' : ''}`} key={`${line.table}-${line.id}`}><Link className="history-link" to={`/detalhes/${line.table}/${line.recordId}`}>{line.meal ? <><MealRecordInfo meal={line.meal} />{line.meal.description && <span className="muted">{line.meal.description}</span>}</> : <><b>{time(line.at)} · {line.title}</b>{line.detail && <span className="muted">{line.detail}</span>}</>}</Link></div>)}</section>)}</div>{hasMore && <button className="secondary history-more" type="button" onClick={() => setShown(value => value + 20)}>Carregar registros anteriores</button>}</> : <section className="card"><p>Nenhum registro neste filtro.</p></section>}</Layout>
 }
 
 function GlucoseChart({ points, compact = false }: { points: { id?: string; at: string; value: number; context?: string }[]; compact?: boolean }) {
@@ -217,7 +220,7 @@ function Report() {
   const location = useLocation(); const [search, setSearch] = useSearchParams(); const selectedPeriod = Number(search.get('period')); const [period, setPeriod] = useState([7, 30, 90].includes(selectedPeriod) ? selectedPeriod : 30)
   const data = useLiveQuery(async () => {
     const since = Date.now() - period * 86400000
-    const [g, m, i, w, e] = await Promise.all([db.glucose.toArray(), db.meals.toArray(), db.insulin.toArray(), db.workouts.toArray(), db.episodes.toArray()])
+    const [g, m, i, w, e] = await Promise.all([db.glucose.toArray(), db.meals.filter(meal => !meal.deletedAt).toArray(), db.insulin.toArray(), db.workouts.toArray(), db.episodes.toArray()])
     return { g: g.filter(x => +new Date(x.at) >= since), m: m.filter(x => +new Date(x.at) >= since), i: i.filter(x => +new Date(x.at) >= since), w: w.filter(x => +new Date(x.startedAt) >= since), e: e.filter(x => +new Date(x.startedAt) >= since) }
   }, [period])
   const values = data?.g.map(x => x.value) ?? []; const summary = glucoseSummary(values)
