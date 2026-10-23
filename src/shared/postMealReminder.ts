@@ -45,3 +45,7 @@ export function nextPostMealCheck(meals: Meal[], now: number) {
 }
 
 export const postMealDismissalKey = (mealId: string) => `glicemio-post-meal-dismissed:${mealId}`
+
+// Compare o evento, sem invalidar por descrição, updatedAt ou formato equivalente do fuso.
+export const postMealDismissalValue = (meal: Pick<Meal, 'at' | 'timeReference'>) =>
+  JSON.stringify({ version: 1, at: reminderInstant(meal.at) ?? meal.at, timeReference: meal.timeReference ?? 'unconfirmed' })
