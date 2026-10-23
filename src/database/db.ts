@@ -2,7 +2,8 @@ import Dexie, { type Table } from 'dexie'
 export type ID = string
 export type Profile = { id: ID; name: string; diagnosis?: string; workoutActivities?: string[]; basalUsage?: 'yes'|'no'|'later'; basalFrequency?: 'daily'|'other'; basalReminderEnabled?: boolean; basalReminderTime?: string; basalMedicationId?: string; basalMedicationName?: string; rapidUsage?: 'yes'|'no'|'later'; rapidMedicationId?: string; rapidMedicationName?: string; createdAt: string; updatedAt: string }
 type Base = { id: ID; createdAt: string; updatedAt: string }
-export type Meal = Base & { kind: string; at: string; description?: string }
+export type MealTimeReference = 'meal_start' | 'meal_end' | 'unconfirmed'
+export type Meal = Base & { kind: string; at: string; description?: string; timeReference?: MealTimeReference }
 export type Glucose = Base & { value: number; at: string; context?: string; note?: string; mealId?: ID; episodeId?: ID }
 export type Insulin = Base & { kind: 'Rápida'|'Basal/lenta'; dose: number; at: string; note?: string; mealId?: ID; medicationId?: string; medicationName?: string; medicationKey?: string }
 export type Workout = Base & { activity: string; startedAt: string; endedAt?: string; note?: string; source?: string; externalReference?: string }

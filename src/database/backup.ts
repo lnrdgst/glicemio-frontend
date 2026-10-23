@@ -18,7 +18,7 @@ function base(record: Record<string, unknown>) { return text(record.id) && date(
 function validate(table: BackupTable, record: unknown) {
   if (!object(record) || !base(record)) return false
   if (table === 'profiles') return record.id === 'local' && text(record.name) && (record.diagnosis === undefined || typeof record.diagnosis === 'string') && (record.workoutActivities === undefined || (list(record.workoutActivities) && record.workoutActivities.every(value => typeof value === 'string')))
-  if (table === 'meals') return text(record.kind) && date(record.at) && (record.description === undefined || typeof record.description === 'string')
+  if (table === 'meals') return text(record.kind) && date(record.at) && (record.description === undefined || typeof record.description === 'string') && (record.timeReference === undefined || record.timeReference === 'meal_start' || record.timeReference === 'meal_end' || record.timeReference === 'unconfirmed')
   if (table === 'glucose') { const value = record.value; return typeof value === 'number' && number(value) && value > 0 && date(record.at) && (record.mealId === undefined || text(record.mealId)) && (record.episodeId === undefined || text(record.episodeId)) }
   if (table === 'insulin') { const dose = record.dose; return (record.kind === 'Rápida' || record.kind === 'Basal/lenta') && typeof dose === 'number' && number(dose) && dose > 0 && date(record.at) && (record.mealId === undefined || text(record.mealId)) }
   if (table === 'workouts') return text(record.activity) && date(record.startedAt) && (record.endedAt === undefined || date(record.endedAt))
@@ -58,12 +58,18 @@ function relationshipErrors(data: BackupData, existing: BackupData) {
   return errors
 }
 
-export async function exportBackup(): Promise<BackupFile> { return { format: 'glicoponto-backup', version: 1, exportedAt: new Date().toISOString(), data: await currentData() } }
+export async function exportBackup(): Promise<BackupFile> { return db.transaction('r', db.tables, async () => ({ format: 'glicoponto-backup' as const, version: 1 as const, exportedAt: new Date().toISOString(), data: await currentData() })) }
 
-export async function previewBackup(textContent: string): Promise<ImportPreview> {
+export function parseBackup(textContent: string) {
   let parsed: unknown
   try { parsed = JSON.parse(textContent) } catch { throw new Error('Não foi possível ler o JSON selecionado.') }
-  const { data, sourceVersion } = dataFrom(parsed); const existing = await currentData()
+  return dataFrom(parsed)
+}
+
+export function backupIntegrityErrors(data: BackupData) { return relationshipErrors(data, data) }
+
+export async function previewBackup(textContent: string): Promise<ImportPreview> {
+  const { data, sourceVersion } = parseBackup(textContent); const existing = await currentData()
   const additions = {} as Record<BackupTable, number>; const duplicates = {} as Record<BackupTable, number>; const conflicts = {} as Record<BackupTable, number>
   for (const table of backupTables) {
     const current = new Map(existing[table].map(record => [record.id, record]))

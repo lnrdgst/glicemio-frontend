@@ -18,6 +18,21 @@ Referências técnicas ao nome anterior permanecem intencionalmente:
 
 Esta alteração não limpa armazenamento nem modifica registros. Dados locais pertencem à origem: trocar o domínio não compartilha IndexedDB ou preferências com a origem anterior. Mudança de domínio e migração de dados ficam fora desta alteração.
 
+## Referência temporal das refeições
+
+Novas refeições usam `timeReference: "meal_start"`: o horário informado representa o início da alimentação. `"meal_end"` identifica o fim; `"unconfirmed"` ou a ausência do campo significam referência não confirmada. Registros antigos e backups sem esse metadado não são classificados automaticamente. A referência aparece no cadastro/edição, nos detalhes, no histórico, na Home e nas opções de associação. Não há conversão de fim em início nem cálculo de intervalo clínico desde um início desconhecido.
+
+Em **Ajustes > Dados e backup > Referência dos horários das refeições antigas**, o procedimento explícito permite identificar como fim somente as refeições selecionadas pelo usuário:
+
+1. Preparar a prévia e baixar o backup completo. A leitura é consistente e a integridade estrutural e das referências é verificada.
+2. Conferir os registros da prévia e selecionar apenas refeições próprias com horário de fim. Nenhuma vem selecionada e referências de início/fim já confirmadas ficam fora do procedimento.
+3. Abrir novamente o JSON salvo no campo de conferência. O conteúdo de todas as sete tabelas deve corresponder à prévia; apenas afirmar que salvou o arquivo não libera a atualização.
+4. Confirmar explicitamente a propriedade dos registros e o significado de fim, e então confirmar a classificação. Cancelar a prévia não altera registros.
+
+Antes da escrita, todas as tabelas são comparadas novamente com a prévia dentro de uma transação. Mudanças, backup incorreto ou referências ausentes bloqueiam a operação. Após a escrita, outra comparação exige que apenas `timeReference` das refeições escolhidas tenha mudado; qualquer falha reverte a transação. `at`, `createdAt`, `updatedAt`, UUIDs, demais campos e associações permanecem intactos na classificação. Referências ausentes devem ser revisadas separadamente; este procedimento não repara nem remove registros.
+
+O banco `glicoponto` e o esquema Dexie versão 2 permanecem iguais: o campo opcional não exige novo índice ou migração de esquema. O backup continua no formato `glicoponto-backup`, versão 1, preservando e validando o metadado opcional e aceitando os arquivos anteriores sem atribuir um significado presumido. Ao editar uma refeição sem mudar o horário exibido, a string `at` original é preservada, incluindo segundos, milissegundos e offset.
+
 ## Verificação
 
 ```sh
