@@ -10,6 +10,7 @@ import { db, stamp, type MealTimeReference } from './database/db'
 import { exportBackup, previewBackup, restoreBackup } from './database/backup'
 import { classifyMealReferences, prepareMealReferencePreview } from './database/mealTimeReference'
 import { mealTimeReferenceLabel } from './shared/meals'
+import { localInput } from './shared/format'
 
 const at = '2026-10-14T12:34:56.789-03:00'
 const makeMeal = (timeReference?: MealTimeReference) => stamp({ kind: 'Almoço', at, description: 'Registro original', ...(timeReference ? { timeReference } : {}) })
@@ -92,12 +93,19 @@ describe('classificação explícita com backup', () => {
 
 describe('referência temporal nos formulários e backups', () => {
   it.each([
-    [undefined, 'Referência não confirmada'], ['unconfirmed', 'Referência não confirmada'],
-    ['meal_start', 'Início da refeição'], ['meal_end', 'Fim da refeição'],
-  ] as const)('apresenta %s na edição sem alterar referência ou instante original ao salvar descrição', async (reference, label) => {
+    [undefined, 'Referência não confirmada', 'Hora da refeição (referência não confirmada)'],
+    ['unconfirmed', 'Referência não confirmada', 'Hora da refeição (referência não confirmada)'],
+    ['meal_start', 'Início da refeição', 'Hora do início da refeição'],
+    ['meal_end', 'Fim da refeição', 'Hora do fim da refeição'],
+  ] as const)('apresenta %s na edição sem alterar referência ou instante original ao salvar descrição', async (reference, label, timeLabel) => {
     const meal = makeMeal(reference); await db.meals.add(meal)
     render(<MemoryRouter initialEntries={[`/refeicao/${meal.id}/editar`]}><App /></MemoryRouter>)
     expect(await screen.findByText(label)).toBeInTheDocument()
+    const time = screen.getByLabelText(timeLabel)
+    expect(time).toHaveAttribute('type', 'time')
+    expect(time).toBeRequired()
+    expect(time).toHaveValue(localInput(meal.at).slice(11))
+    expect(screen.queryByLabelText('Hora')).toBeNull()
     fireEvent.change(await screen.findByLabelText('Descrição (opcional)'), { target: { value: 'Descrição corrigida' } })
     await userEvent.click(screen.getByRole('button', { name: 'Salvar alterações da refeição' }))
     await screen.findByRole('heading', { name: 'Olá, Pessoa de teste' })
@@ -112,6 +120,7 @@ describe('referência temporal nos formulários e backups', () => {
     const legacy = makeMeal(); await db.meals.add(legacy)
     render(<MemoryRouter initialEntries={['/refeicao']}><App /></MemoryRouter>)
     expect(await screen.findByText('Início da refeição')).toBeInTheDocument()
+    expect(screen.getByLabelText('Hora do início da refeição')).toHaveAttribute('type', 'time')
     fireEvent.change(screen.getByLabelText('Tipo de refeição'), { target: { value: 'Lanche' } })
     await userEvent.click(screen.getByRole('button', { name: 'Salvar registro de refeição' }))
     await screen.findByRole('heading', { name: 'Olá, Pessoa de teste' })

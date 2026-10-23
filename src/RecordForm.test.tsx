@@ -13,7 +13,7 @@ const open = (route: string) => render(<MemoryRouter initialEntries={[route]}><A
 const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
 const changeDateTime = (value: string) => {
   const [date = '', time = ''] = value.split('T')
-  change('Data', date); change('Hora', time)
+  change('Data', date); fireEvent.change(screen.getByLabelText(/^Hora(?: do início da refeição)?$/), { target: { value: time } })
 }
 const save = () => userEvent.click(screen.getByRole('button', { name: /Salvar registro de/ }))
 const mealAt = async (value: string, kind = 'Almoço') => { const meal = stamp({ kind, at: iso(value) }); await db.meals.add(meal); return meal }
@@ -54,7 +54,7 @@ describe('data e hora nativas separadas', () => {
     vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-10-14T15:20:00.000Z'))
     const current = localInput().split('T')
     open(`/${kind}`)
-    const date = screen.getByLabelText('Data'), time = screen.getByLabelText('Hora')
+    const date = screen.getByLabelText('Data'), time = screen.getByLabelText(kind === 'refeicao' ? 'Hora do início da refeição' : 'Hora')
     expect(date).toHaveAttribute('type', 'date'); expect(date).toHaveValue(current[0]); expect(date).toBeRequired()
     expect(time).toHaveAttribute('type', 'time'); expect(time).toHaveValue(current[1]); expect(time).toBeRequired()
     expect(document.querySelector('input[type="datetime-local"]')).toBeNull()
@@ -88,19 +88,19 @@ describe('data e hora nativas separadas', () => {
 
   it('edita e limpa data e hora independentemente sem perder o outro valor', () => {
     open('/refeicao')
-    const initialTime = (screen.getByLabelText('Hora') as HTMLInputElement).value
-    change('Data', '2026-10-11'); expect(screen.getByLabelText('Hora')).toHaveValue(initialTime)
-    change('Hora', '21:45'); expect(screen.getByLabelText('Data')).toHaveValue('2026-10-11')
-    change('Data', ''); expect(screen.getByLabelText('Hora')).toHaveValue('21:45')
-    change('Data', '2026-10-12'); change('Hora', ''); expect(screen.getByLabelText('Data')).toHaveValue('2026-10-12')
-    change('Hora', '00:15'); expect(screen.getByLabelText('Data')).toHaveValue('2026-10-12')
+    const initialTime = (screen.getByLabelText('Hora do início da refeição') as HTMLInputElement).value
+    change('Data', '2026-10-11'); expect(screen.getByLabelText('Hora do início da refeição')).toHaveValue(initialTime)
+    change('Hora do início da refeição', '21:45'); expect(screen.getByLabelText('Data')).toHaveValue('2026-10-11')
+    change('Data', ''); expect(screen.getByLabelText('Hora do início da refeição')).toHaveValue('21:45')
+    change('Data', '2026-10-12'); change('Hora do início da refeição', ''); expect(screen.getByLabelText('Data')).toHaveValue('2026-10-12')
+    change('Hora do início da refeição', '00:15'); expect(screen.getByLabelText('Data')).toHaveValue('2026-10-12')
   })
 
   it('atualiza a sugestão de refeição pela hora e preserva uma escolha manual', async () => {
     open('/refeicao')
-    change('Hora', '10:00'); expect(screen.getByLabelText('Tipo de refeição')).toHaveValue('Almoço')
-    change('Hora', '16:30'); expect(screen.getByLabelText('Tipo de refeição')).toHaveValue('Lanche')
-    change('Tipo de refeição', 'Outro'); change('Hora', '19:00')
+    change('Hora do início da refeição', '10:00'); expect(screen.getByLabelText('Tipo de refeição')).toHaveValue('Almoço')
+    change('Hora do início da refeição', '16:30'); expect(screen.getByLabelText('Tipo de refeição')).toHaveValue('Lanche')
+    change('Tipo de refeição', 'Outro'); change('Hora do início da refeição', '19:00')
     expect(screen.getByLabelText('Tipo de refeição')).toHaveValue('Outro')
     await save(); await screen.findByRole('status')
     expect((await db.meals.toArray())[0]).toMatchObject({ kind: 'Outro' })
@@ -110,13 +110,13 @@ describe('data e hora nativas separadas', () => {
     const record = await mealAt('2026-10-11T16:30', 'Outro')
     open(`/refeicao/${record.id}/editar`)
     expect(await screen.findByLabelText('Tipo de refeição')).toHaveValue('Outro')
-    change('Hora', '19:00')
+    change('Hora da refeição (referência não confirmada)', '19:00')
     expect(screen.getByLabelText('Tipo de refeição')).toHaveValue('Outro')
   })
 
   it.each([['refeicao', 'meals'], ['glicemia', 'glucose'], ['insulina', 'insulin'], ['consulta', 'appointments']])('persiste o horário efetivo retroativo de %s sem deslocar o horário local', async (kind, table) => {
     open(`/${kind}`); await fill(kind)
-    change('Data', '2026-10-11'); change('Hora', '21:45'); await save(); await screen.findByRole('status')
+    changeDateTime('2026-10-11T21:45'); await save(); await screen.findByRole('status')
     const record = (await db.table(table).toArray())[0]
     expect(record.at).toBe(new Date(2026, 9, 11, 21, 45).toISOString())
     expect(localInput(record.at)).toBe('2026-10-11T21:45')
@@ -140,11 +140,11 @@ describe('data e hora nativas separadas', () => {
     } finally { reopened.close() }
   })
 
-  it.each(['Data', 'Hora'])('impede salvar refeição com %s vazia, mantendo o campo restante', async label => {
+  it.each(['Data', 'Hora do início da refeição'])('impede salvar refeição com %s vazia, mantendo o campo restante', async label => {
     open('/refeicao'); await fill('refeicao'); changeDateTime('2026-10-11T21:45'); change(label, '')
     const input = screen.getByLabelText(label) as HTMLInputElement
     expect(input.validity.valueMissing).toBe(true)
-    expect(screen.getByLabelText(label === 'Data' ? 'Hora' : 'Data')).toHaveValue(label === 'Data' ? '21:45' : '2026-10-11')
+    expect(screen.getByLabelText(label === 'Data' ? 'Hora do início da refeição' : 'Data')).toHaveValue(label === 'Data' ? '21:45' : '2026-10-11')
     await save(); expect(await db.meals.count()).toBe(0)
     fireEvent.submit(screen.getByRole('button', { name: /Salvar registro de/ }).closest('form')!)
     expect(await screen.findByRole('alert')).toHaveTextContent('data e um horário válidos')
