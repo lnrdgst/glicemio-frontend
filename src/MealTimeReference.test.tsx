@@ -23,7 +23,7 @@ beforeEach(async () => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('classificação explícita com backup', () => {
-  it('altera somente a referência selecionada e preserva integralmente todas as sete tabelas', async () => {
+  it('altera somente a referência selecionada e preserva integralmente todas as nove tabelas', async () => {
     const own = makeMeal(), another = makeMeal(), start = makeMeal('meal_start'), end = makeMeal('meal_end'), unknown = makeMeal('unconfirmed')
     await db.meals.bulkAdd([own, another, start, end, unknown])
     const episode = stamp({ startedAt: at, symptoms: ['Suor'] }); await db.episodes.add(episode)
@@ -31,6 +31,8 @@ describe('classificação explícita com backup', () => {
     await db.insulin.add(stamp({ kind: 'Rápida' as const, dose: 2, at, mealId: own.id }))
     await db.workouts.add(stamp({ activity: 'Caminhada', startedAt: at }))
     await db.appointments.add(stamp({ at, professional: 'Teste' }))
+    const food = stamp({ name: 'Alimento sintético', revision: 1 }); await db.foods.add(food)
+    await db.mealItems.add(stamp({ mealId: own.id, foodId: food.id, foodName: 'Nome histórico preservado', quantity: '1.234567', unit: 'cup' as const, revision: 1 }))
     const preview = await prepareMealReferencePreview()
     expect(preview.meals.map(meal => meal.id).sort()).toEqual([own.id, another.id, unknown.id].sort())
     expect((await exportBackup()).data).toEqual(preview.backup.data)
@@ -39,7 +41,7 @@ describe('classificação explícita com backup', () => {
     expect((await exportBackup()).data).toEqual({ ...preview.backup.data, meals: preview.backup.data.meals.map(meal => [own.id, unknown.id].includes(meal.id) ? { ...meal, timeReference: 'meal_end' } : meal) })
     expect(await db.meals.get(own.id)).toEqual({ ...own, timeReference: 'meal_end' })
     expect(await db.meals.get(another.id)).toEqual(another)
-    expect(db.verno).toBe(2)
+    expect(db.verno).toBe(3)
   })
 
   it('exige confirmação e arquivo de backup correspondente sem nenhuma escrita', async () => {
@@ -58,6 +60,20 @@ describe('classificação explícita com backup', () => {
     await db.profiles.update('local', { name: 'Outra pessoa' })
     await expect(classifyMealReferences(preview, [meal.id], JSON.stringify(preview.backup), true)).rejects.toThrow(/dados mudaram/)
     expect(await db.meals.get(meal.id)).toEqual(meal)
+  })
+
+  it.each(['foods', 'mealItems'] as const)('bloqueia alteração em %s após a prévia e exige backup completo das novas coleções', async table => {
+    const meal = makeMeal(), food = stamp({ name: 'Alimento', revision: 1 })
+    const item = stamp({ mealId: meal.id, foodId: food.id, foodName: 'Nome histórico', quantity: '0.5', unit: 'unit' as const, revision: 1 })
+    await db.meals.add(meal); await db.foods.add(food); await db.mealItems.add(item)
+    const preview = await prepareMealReferencePreview()
+    const incomplete = structuredClone(preview.backup); incomplete.data.mealItems = []
+    await expect(classifyMealReferences(preview, [meal.id], JSON.stringify(incomplete), true)).rejects.toThrow(/não corresponde/)
+    if (table === 'foods') await db.foods.update(food.id, { name: 'Nome alterado' })
+    else await db.mealItems.update(item.id, { quantity: '2' })
+    const before = (await exportBackup()).data
+    await expect(classifyMealReferences(preview, [meal.id], JSON.stringify(preview.backup), true)).rejects.toThrow(/dados mudaram/)
+    expect((await exportBackup()).data).toEqual(before)
   })
 
   it('bloqueia referências ausentes antes de oferecer a classificação', async () => {

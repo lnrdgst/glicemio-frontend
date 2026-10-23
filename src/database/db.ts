@@ -4,6 +4,12 @@ export type Profile = { id: ID; name: string; diagnosis?: string; workoutActivit
 type Base = { id: ID; createdAt: string; updatedAt: string }
 export type MealTimeReference = 'meal_start' | 'meal_end' | 'unconfirmed'
 export type Meal = Base & { kind: string; at: string; description?: string; timeReference?: MealTimeReference }
+export const mealItemUnits = ['g', 'kg', 'mg', 'mL', 'L', 'unit', 'portion', 'tsp', 'tbsp', 'cup'] as const
+export type MealItemUnit = typeof mealItemUnits[number]
+type StructuredBase = Base & { revision: number; deletedAt?: string }
+export type Food = StructuredBase & { name: string }
+// Decimal exato: não converter para number nem presumir equivalências entre unidades.
+export type MealItem = StructuredBase & { mealId: ID; foodId?: ID; foodName: string; quantity: string; unit: MealItemUnit }
 export type Glucose = Base & { value: number; at: string; context?: string; note?: string; mealId?: ID; episodeId?: ID }
 export type Insulin = Base & { kind: 'Rápida'|'Basal/lenta'; dose: number; at: string; note?: string; mealId?: ID; medicationId?: string; medicationName?: string; medicationKey?: string }
 export type Workout = Base & { activity: string; startedAt: string; endedAt?: string; note?: string; source?: string; externalReference?: string }
@@ -11,11 +17,14 @@ export type Episode = Base & { startedAt: string; endedAt?: string; symptoms: st
 export type Appointment = Base & { at: string; attendanceType?: 'general'|'endocrinologist'|'nutritionist'|'ophthalmologist'|'other'; attendanceTypeOther?: string; professional?: string; location?: string; note?: string }
 export class GlicopontoDB extends Dexie {
  profiles!: Table<Profile>; meals!: Table<Meal>; glucose!: Table<Glucose>; insulin!: Table<Insulin>; workouts!: Table<Workout>; episodes!: Table<Episode>; appointments!: Table<Appointment>
+ foods!: Table<Food>; mealItems!: Table<MealItem>
  constructor(name = import.meta.env.MODE === 'test' ? 'glicoponto-tests' : import.meta.env.VITE_DB_NAME || 'glicoponto'){
   super(name)
   this.version(1).stores({profiles:'id', meals:'id,at', glucose:'id,at,mealId,episodeId', insulin:'id,at,mealId', workouts:'id,startedAt', episodes:'id,startedAt', appointments:'id,at'})
   // Somente um índice adicional. Nenhum registro precisa ser reescrito.
   this.version(2).stores({insulin:'id,at,mealId,medicationKey'})
+  // Apenas novas coleções. Não reescreva registros nem interprete descrições antigas.
+  this.version(3).stores({foods:'id,name,deletedAt', mealItems:'id,mealId,foodId,deletedAt'})
  }
 }
 export const db = new GlicopontoDB()

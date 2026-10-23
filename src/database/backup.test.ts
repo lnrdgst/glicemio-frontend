@@ -11,7 +11,7 @@ it('exporta o formato versionado e restaura um backup legado preservando IDs e v
   const profile = { id: 'local', name: 'Teste', basalUsage: 'yes' as const, basalMedicationId: 'glargine-u100-basaglar', rapidUsage: 'yes' as const, rapidMedicationId: 'lispro-humalog', createdAt: now(), updatedAt: now() }
   await db.profiles.add(profile); await db.meals.add(meal); await db.episodes.add(episode); await db.glucose.add(glucose); await db.appointments.add(appointment)
   const backup = await exportBackup()
-  expect(backup).toMatchObject({ format: 'glicoponto-backup', version: 1 }); expect(backup.data.glucose[0]).toEqual(glucose)
+  expect(backup).toMatchObject({ format: 'glicoponto-backup', version: 2 }); expect(backup.data.glucose[0]).toEqual(glucose)
   await Promise.all(db.tables.map(table => table.clear()))
   const preview = await previewBackup(JSON.stringify(backup.data))
   expect(preview.sourceVersion).toBe('legacy'); expect(preview.relationshipErrors).toEqual([])

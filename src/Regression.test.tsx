@@ -186,7 +186,7 @@ it('exporta JSON completo incluindo legados, sem modificar o armazenamento', asy
   const blob = create.mock.calls[0][0] as unknown as Blob
   const text = await new Promise<string>(resolve => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.readAsText(blob) })
   const exported = JSON.parse(text)
-  expect(exported).toMatchObject({ format: 'glicoponto-backup', version: 1 }); expect(exported.data.insulin).toEqual([legacy]); expect(Object.keys(exported.data)).toHaveLength(7)
+  expect(exported).toMatchObject({ format: 'glicoponto-backup', version: 2 }); expect(exported.data.insulin).toEqual([legacy]); expect(Object.keys(exported.data)).toHaveLength(9)
   expect(await db.insulin.get(legacy.id)).toEqual(legacy); expect(revoke).toHaveBeenCalledWith('blob:test')
 })
 

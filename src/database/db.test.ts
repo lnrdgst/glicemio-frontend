@@ -6,14 +6,15 @@ import { db, GlicopontoDB, stamp } from './db'
 describe('persistência local Glicemio', () => {
   beforeEach(async () => { await Promise.all(db.tables.map(table => table.clear())) })
 
-  it('migra v1 para v2 preservando integralmente todas as tabelas e campos legados', async () => {
+  it.each([1, 2])('migra v%s para v3 preservando integralmente todas as tabelas e campos legados', async version => {
     const name = `glicoponto-migration-test-${crypto.randomUUID()}`
     const legacy = new Dexie(name)
     legacy.version(1).stores({ profiles: 'id', meals: 'id,at', glucose: 'id,at,mealId,episodeId', insulin: 'id,at,mealId', workouts: 'id,startedAt', episodes: 'id,startedAt', appointments: 'id,at' })
+    if (version === 2) legacy.version(2).stores({ insulin: 'id,at,mealId,medicationKey' })
     const at = '2026-10-12T21:15:00.000Z'
     const fixtures = {
       profiles: [{ id: 'local', name: 'Legado', createdAt: at, updatedAt: at }],
-      meals: [stamp({ kind: 'Jantar', at })], glucose: [stamp({ value: 120, at, context: 'Jejum' })],
+      meals: [stamp({ kind: 'Jantar', at, description: 'Arroz e feijão: não converter', extra: 'campo legado' }), ...(['meal_start', 'meal_end', 'unconfirmed'] as const).map(timeReference => stamp({ kind: 'Lanche', at: '2026-10-12T18:15:00.123-03:00', timeReference }))], glucose: [stamp({ value: 120, at, context: 'Jejum' })],
       insulin: [stamp({ kind: 'Basal/lenta', dose: 18, at, mealId: 'vínculo-legado', note: 'Sem nome' })],
       workouts: [stamp({ activity: 'MUSCULAÇÃO', startedAt: at, source: 'local', externalReference: 'preservar' })],
       episodes: [stamp({ startedAt: at, symptoms: ['Tremor'] })], appointments: [stamp({ at, professional: 'Profissional' })],
@@ -22,9 +23,12 @@ describe('persistência local Glicemio', () => {
     legacy.close()
     const upgraded = new GlicopontoDB(name)
     try {
-      await upgraded.open(); expect(upgraded.verno).toBe(2)
-      for (const [table, rows] of Object.entries(fixtures)) expect(await upgraded.table(table).toArray()).toEqual(rows)
+      await upgraded.open(); expect(upgraded.verno).toBe(3)
+      for (const [table, rows] of Object.entries(fixtures)) expect(await upgraded.table(table).toArray()).toEqual([...rows].sort((a, b) => a.id.localeCompare(b.id)))
       expect(upgraded.insulin.schema.indexes.map(index => index.name)).toContain('medicationKey')
+      expect(await upgraded.foods.count()).toBe(0)
+      expect(await upgraded.mealItems.count()).toBe(0)
+      expect(upgraded.mealItems.schema.indexes.map(index => index.name)).toEqual(['mealId', 'foodId', 'deletedAt'])
     } finally { upgraded.close(); await Dexie.delete(name) }
   })
 
