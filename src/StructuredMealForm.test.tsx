@@ -46,7 +46,7 @@ it('cadastra vários alimentos com decimais exatos e mostra nomes e unidades nos
   expect(items.find(item => item.foodName === 'Feijão')?.quantity).toBe('999999999999.999999')
   expect(items.every(item => typeof item.foodId === 'string')).toBe(true)
   expect(await db.foods.count()).toBe(2)
-  await userEvent.click(screen.getByRole('link', { name: /Almoço.*Início da refeição/ }))
+  await userEvent.click(screen.getByRole('link', { name: /Almoço.*Hoje/ }))
   const summary = await screen.findByRole('region', { name: 'Alimentos consumidos' })
   expect(within(summary).getByText('Arroz')).toBeInTheDocument()
   expect(within(summary).getByText('0,5 · Xícara')).toBeInTheDocument()

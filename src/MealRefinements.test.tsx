@@ -30,7 +30,7 @@ it('ordena rótulos portugueses das unidades sem alterar códigos ou Selecionar'
   expect(options.map(option => option.value)).toEqual(['', 'tsp', 'tbsp', 'g', 'L', 'mg', 'mL', 'portion', 'kg', 'unit', 'cup'])
 })
 
-it('filtra exclusões antes do limite da Home e organiza tipo, horário e referência em linhas', async () => {
+it('filtra exclusões antes do limite da Home e resume somente tipo e horário em linhas', async () => {
   await db.meals.bulkAdd([
     ...Array.from({ length: 4 }, (_, i) => stamp({ kind: `Excluída ${i}`, at: at(i), deletedAt: now() })),
     ...Array.from({ length: 3 }, (_, i) => stamp({ kind: `Ativa ${i}`, at: at(400 + i), timeReference: 'meal_start' as const })),
@@ -40,8 +40,8 @@ it('filtra exclusões antes do limite da Home e organiza tipo, horário e refer�
   const rows = document.querySelectorAll('.meal-list-item')
   expect(rows).toHaveLength(3)
   for (const row of rows) {
-    expect(row.querySelector('.meal-record-info')?.children).toHaveLength(3)
-    expect(row).toHaveTextContent('Início da refeição')
+    expect(row.querySelector('.meal-record-info')?.children).toHaveLength(2)
+    expect(row).not.toHaveTextContent('Início da refeição')
   }
   expect(screen.queryByText(/Excluída/)).toBeNull()
 })

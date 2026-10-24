@@ -113,6 +113,11 @@ it.each(['hipoglicemia', 'atenção alta', 'basal', 'consulta'])('coexiste com o
     : await screen.findByText('Atenção alta')
   const reminder = await screen.findByText('Que tal registrar sua glicemia?')
   expect(alert.compareDocumentPosition(reminder) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  const actions = screen.getByLabelText('Ações rápidas')
+  expect(actions.compareDocumentPosition(reminder) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(reminder.compareDocumentPosition(document.querySelector('.glucose-section')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(reminder.closest('.home-notices')).toBeInTheDocument()
+  expect(screen.getAllByLabelText('Lembrete de glicemia após refeição')).toHaveLength(1)
 })
 
 it('permite desativar nos Ajustes, preserva a preferência no backup e aceita perfil antigo', async () => {

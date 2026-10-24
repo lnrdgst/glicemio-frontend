@@ -58,6 +58,8 @@ select.field { text-overflow: ellipsis; }
 .home-record.glucose-card { border:2px solid var(--glucose-status-color); }
 .glucose-status { color:var(--glucose-status-color); font-size:.9rem; font-weight:700; margin:0 0 6px; }
 .glucose-guidance { border-left:2px solid var(--glucose-status-color); color:var(--color-muted); font-size:.85rem; line-height:1.4; margin:12px 0 0; padding-left:10px; }
+.home-glucose-priority { border-left:3px solid var(--glucose-status-color); margin:16px 0; padding:4px 0 4px 12px; }
+.home-glucose-priority > .muted { font-size:.8rem; margin:6px 0; }
 .home-record:focus-visible, .home-list-item:focus-visible, .home-appointment:focus-visible, .glucose-insulin-context-line:focus-visible, .history-link:focus-visible { outline:2px solid var(--color-copper); outline-offset:3px; }
 .home-section { margin-top:22px; }
 .glucose-section { margin-bottom:22px; }
@@ -203,13 +205,16 @@ select.field { text-overflow: ellipsis; }
 .glucose-legend ul { display:grid; gap:6px 12px; grid-template-columns:repeat(auto-fit, minmax(145px, 1fr)); list-style:none; margin:8px 0; padding:0; }
 .glucose-legend li { align-items:center; display:flex; gap:6px; min-width:0; }
 .glucose-legend-swatch { border-radius:50%; flex:0 0 8px; height:8px; width:8px; }
-.daily-glucose-summary { margin-top:16px; }
-.daily-glucose-heading { align-items:baseline; color:var(--color-muted); display:flex; font-size:.82rem; font-weight:700; justify-content:space-between; gap:8px; }
-.daily-glucose-heading span:last-child { font-weight:400; white-space:nowrap; }
+.daily-glucose-summary { border-radius:12px; color:inherit; display:block; margin-top:16px; text-decoration:none; }
+.daily-glucose-summary:focus-visible { outline:2px solid var(--color-copper); outline-offset:4px; }
+.daily-glucose-heading { align-items:baseline; color:var(--color-muted); display:flex; flex-wrap:wrap; font-size:.82rem; font-weight:700; justify-content:space-between; gap:8px; }
+.daily-glucose-title { align-items:center; display:inline-flex; gap:4px; min-width:0; }
+.daily-glucose-title svg { flex-shrink:0; }
+.daily-glucose-heading > span:last-child { font-weight:400; white-space:nowrap; }
 .daily-glucose-summary dl { display:grid; gap:8px; grid-template-columns:repeat(3, minmax(0, 1fr)); margin:8px 0; }
 .daily-glucose-summary dl div { background:#181513; border:1px solid #39322e; border-radius:12px; min-width:0; padding:9px 8px; }
 .daily-glucose-summary dt { color:var(--color-muted); font-size:.72rem; }
-.daily-glucose-summary dd { font-size:.95rem; font-weight:700; margin:4px 0 0; white-space:nowrap; }
+.daily-glucose-summary dd { font-size:.95rem; font-weight:700; margin:4px 0 0; overflow-wrap:anywhere; }
 .daily-glucose-summary dd small { font-size:.68rem; font-weight:400; }
 .daily-glucose-summary .muted { font-size:.75rem; margin:0; }
 .report-section .card h3 { margin:8px 0 0; font-size:1.15rem; }
