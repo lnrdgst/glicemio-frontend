@@ -58,8 +58,7 @@ select.field { text-overflow: ellipsis; }
 .home-record.glucose-card { border:2px solid var(--glucose-status-color); }
 .glucose-status { color:var(--glucose-status-color); font-size:.9rem; font-weight:700; margin:0 0 6px; }
 .glucose-guidance { border-left:2px solid var(--glucose-status-color); color:var(--color-muted); font-size:.85rem; line-height:1.4; margin:12px 0 0; padding-left:10px; }
-.home-glucose-priority { border-left:3px solid var(--glucose-status-color); margin:16px 0; padding:4px 0 4px 12px; }
-.home-glucose-priority > .muted { font-size:.8rem; margin:6px 0; }
+.home-notices > .glucose-guidance { margin:16px 0; }
 .home-record:focus-visible, .home-list-item:focus-visible, .home-appointment:focus-visible, .glucose-insulin-context-line:focus-visible, .history-link:focus-visible { outline:2px solid var(--color-copper); outline-offset:3px; }
 .home-section { margin-top:22px; }
 .glucose-section { margin-bottom:22px; }

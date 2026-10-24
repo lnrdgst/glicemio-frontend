@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import '@testing-library/jest-dom/vitest'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../App'
 import { db, now, stamp } from '../database/db'
@@ -28,6 +28,61 @@ beforeEach(async () => {
   await db.profiles.put({ id: 'local', name: 'Teste', createdAt: now(), updatedAt: now() })
 })
 afterEach(() => { cleanup(); vi.useRealTimers() })
+
+it.each([
+  [115, 'Dentro da faixa definida', '#71AFA5'],
+  [75, 'Abaixo da faixa definida', '#D5B45F'],
+  [201, 'Atenção', '#D98A60'],
+  [320, 'Atenção alta', '#CE6872'],
+  [65, 'Hipoglicemia nível 1', '#CE6872'],
+  [50, 'Hipoglicemia nível 2 — Atenção alta', '#A93347'],
+  [150, 'Intermediária', '#D5B45F'],
+  [-1, 'Valor inválido', '#B9AFA8'],
+] as const)('exibe %s mg/dL com classificação única no cartão, após contexto e antes do resumo', async (value, label, color) => {
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 9, 24, 18))
+  const meal = stamp({ kind: 'Almoço', at: new Date(2026, 9, 24, 12).toISOString() })
+  const record = stamp({ value, at: new Date(2026, 9, 24, 16, 37).toISOString(), context: 'Após refeição', mealId: meal.id })
+  await db.meals.add(meal)
+  await db.glucose.bulkAdd([stamp({ value: 100, at: new Date(2026, 9, 24, 8).toISOString() }), record])
+  render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
+  const summary = await screen.findByRole('link', { name: 'Resumo glicêmico de hoje' })
+  await screen.findByText('Após refeição · Almoço')
+  const card = summary.closest<HTMLElement>('.glucose-card')!
+  const status = within(card).getByText(label, { exact: true })
+  const detail = card.querySelector('.home-glucose-detail')!
+  expect(card.style.getPropertyValue('--glucose-status-color')).toBe(color)
+  expect(document.querySelectorAll('.glucose-status')).toHaveLength(1)
+  expect(detail.lastElementChild).toBe(status)
+  expect([...detail.children].map(child => child.textContent)).toEqual([
+    `${value} mg/dL`, 'Hoje, às 16:37', 'Após refeição · Almoço', label,
+  ])
+  expect(detail.nextElementSibling).toBe(summary)
+  expect(summary.nextElementSibling).toHaveAttribute('aria-label', 'Últimas aplicações registradas')
+  expect(summary).toHaveAttribute('href', '/relatorio?period=today')
+  const notices = document.querySelector('.home-notices')!
+  expect(notices.querySelector('.glucose-status')).toBeNull()
+  expect(notices).not.toHaveTextContent(/Última medição|mg\/dL|Hoje, às 16:37/)
+  if (value === 50 || value === 65) {
+    const guidance = screen.getByLabelText('Orientação de segurança para hipoglicemia')
+    expect(notices).toContainElement(guidance)
+    expect(guidance).toHaveTextContent(/siga.*plano individual de tratamento da hipoglicemia/i)
+    expect(detail).toHaveAttribute('aria-describedby', guidance.id)
+  } else {
+    expect(notices).toBeEmptyDOMElement()
+    expect(detail).not.toHaveAttribute('aria-describedby')
+  }
+  expect(await db.glucose.get(record.id)).toEqual(record)
+})
+
+it('não apresenta classificação ou orientação sem medições e preserva acesso ao cadastro', async () => {
+  render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
+  await screen.findByRole('heading', { name: 'Nenhuma medição ainda' })
+  expect(document.querySelector('.glucose-status')).toBeNull()
+  expect(document.querySelector('.home-notices')).toBeEmptyDOMElement()
+  expect(screen.queryByLabelText('Orientação de segurança para hipoglicemia')).toBeNull()
+  const section = document.querySelector('.glucose-section')!
+  expect(within(section as HTMLElement).getByRole('link', { name: 'Registrar glicemia' })).toHaveAttribute('href', '/glicemia')
+})
 
 it('atualiza o cartão da Home após novo registro e edição sem alterar o registro', async () => {
   const record = stamp({ value: 65, at: now(), context: 'Jejum' }); await db.glucose.add(record)

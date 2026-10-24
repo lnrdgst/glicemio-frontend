@@ -100,7 +100,7 @@ it('não encadeia avisos simultâneos para refeições próximas', async () => {
   expect(screen.queryByText('Que tal registrar sua glicemia?')).toBeNull()
 })
 
-it.each(['hipoglicemia', 'atenção alta', 'basal', 'consulta'])('coexiste com o aviso de %s mantendo seu destaque acima', async priority => {
+it.each(['hipoglicemia', 'atenção alta', 'basal', 'consulta'])('coexiste com %s, prioriza ações e mantém classificação no cartão', async priority => {
   await addMeal()
   if (priority === 'hipoglicemia') await db.glucose.add(stamp({ value: 50, at: new Date(base + 60 * minute).toISOString() }))
   if (priority === 'atenção alta') await db.glucose.add(stamp({ value: 320, at: new Date(base + 60 * minute).toISOString() }))
@@ -112,11 +112,18 @@ it.each(['hipoglicemia', 'atenção alta', 'basal', 'consulta'])('coexiste com o
     : priority === 'hipoglicemia' ? await screen.findByText(/tratamento da hipoglicemia/)
     : await screen.findByText('Atenção alta')
   const reminder = await screen.findByText('Que tal registrar sua glicemia?')
-  expect(alert.compareDocumentPosition(reminder) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  if (priority === 'atenção alta') {
+    expect(document.querySelector('.glucose-card')).toContainElement(alert)
+    expect(reminder.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  } else {
+    expect(alert.compareDocumentPosition(reminder) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  }
   const actions = screen.getByLabelText('Ações rápidas')
   expect(actions.compareDocumentPosition(reminder) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   expect(reminder.compareDocumentPosition(document.querySelector('.glucose-section')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   expect(reminder.closest('.home-notices')).toBeInTheDocument()
+  expect(document.querySelector('.home-notices .glucose-status')).toBeNull()
+  expect(document.querySelector('.home-notices')).not.toHaveTextContent('Última medição registrada:')
   expect(screen.getAllByLabelText('Lembrete de glicemia após refeição')).toHaveLength(1)
 })
 
@@ -182,6 +189,8 @@ it('permite consulta nas próximas 24h, basal e pós-refeição simultâneos sem
   await screen.findByText('Consulta em breve')
   await screen.findByText('Insulina basal — lembrete')
   await screen.findByText('Atenção alta')
+  expect(document.querySelector('.glucose-card .glucose-status')).toHaveTextContent('Atenção alta')
+  expect(document.querySelector('.home-notices')).not.toHaveTextContent('Atenção alta')
   expect(await screen.findAllByLabelText('Lembrete de glicemia após refeição')).toHaveLength(1)
   await userEvent.click(screen.getByRole('button', { name: 'Dispensar' }))
   expect(screen.getByText('Consulta em breve')).toBeInTheDocument()
