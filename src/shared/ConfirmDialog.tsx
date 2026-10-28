@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
-export function ConfirmDialog({ saving, onCancel, onConfirm, error, children }: {
+export function ConfirmDialog({ saving, onCancel, onConfirm, error, children, title = 'Excluir este registro?', confirmLabel = 'Confirmar exclusão', busyLabel = 'Excluindo…', irreversible = true }: {
   saving: boolean; onCancel: () => void; onConfirm: () => void; error?: string; children?: ReactNode
+  title?: string; confirmLabel?: string; busyLabel?: string; irreversible?: boolean
 }) {
   const dialog = useRef<HTMLDialogElement>(null), cancel = useRef<HTMLButtonElement>(null)
   const titleId = useId(), descriptionId = useId()
@@ -22,9 +23,9 @@ export function ConfirmDialog({ saving, onCancel, onConfirm, error, children }: 
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
     }}>
-    <h2 id={titleId}>Excluir este registro?</h2>
-    <div id={descriptionId}>{children}<p>Esta ação não poderá ser desfeita.</p></div>
+    <h2 id={titleId}>{title}</h2>
+    <div id={descriptionId}>{children}{irreversible && <p>Esta ação não poderá ser desfeita.</p>}</div>
     {error && <p role="alert">{error}</p>}
-    <div className="confirmation-actions"><button ref={cancel} className="secondary" type="button" disabled={saving} onClick={onCancel}>Cancelar</button><button className="danger" type="button" disabled={saving} onClick={onConfirm}>{saving ? 'Excluindo…' : 'Confirmar exclusão'}</button></div>
+    <div className="confirmation-actions"><button ref={cancel} className="secondary" type="button" disabled={saving} onClick={onCancel}>Cancelar</button><button className="danger" type="button" disabled={saving} onClick={onConfirm}>{saving ? busyLabel : confirmLabel}</button></div>
   </dialog>, document.body)
 }

@@ -2,13 +2,14 @@ import { useEffect, useId, useState, type FormEvent } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowDownToLine, ExternalLink } from 'lucide-react'
-import { db, now, stamp, type Insulin } from './database/db'
+import { db, now, stamp, type Appointment, type Insulin } from './database/db'
 import { dateTime, duration, iso, localInput } from './shared/format'
 import { activitySuggestions, cleanName, glucoseContextSuggestion, insulinCatalog, insulinName, mealAssociationOptions, medicationIdentity, normalizedName, previousInsulin, recentMeal } from './shared/records'
 import { Button, Layout, usePersistence, ValidationError } from './shared/ui'
 import { DateTimeFields } from './shared/DateTimeFields'
 import { mealTimeReferenceLabel } from './shared/meals'
 import { MealRecordForm } from './MealRecordForm'
+import { AppointmentError, editAppointment } from './database/appointments'
 
 export type RecordKind = 'glicemia' | 'refeicao' | 'insulina' | 'treino' | 'consulta'
 const contexts = ['Não informado', 'Jejum', 'Antes da refeição', 'Após refeição', 'Antes do treino', 'Após treino', 'Ao deitar', 'Outro']
@@ -55,9 +56,10 @@ function ClinicalRecordForm({ kind }: { kind: Exclude<RecordKind, 'refeicao'> })
   const meals = useLiveQuery(() => db.meals.orderBy('at').reverse().filter(meal => !meal.deletedAt).toArray(), []) ?? []; const applications = useLiveQuery(() => db.insulin.orderBy('at').reverse().toArray(), []) ?? []; const workouts = useLiveQuery(() => db.workouts.orderBy('startedAt').reverse().toArray(), []) ?? []; const profile = useLiveQuery(() => db.profiles.get('local'), [])
   const [at, setAt] = useState(() => kind === 'consulta' ? '' : localInput()); const [context, setContext] = useState('Não informado'); const [contextTouched, setContextTouched] = useState(false); const [linkedMealId, setLinkedMealId] = useState(''); const [associationConfirmed, setAssociationConfirmed] = useState(false)
   const [insulinKind, setInsulinKind] = useState<Insulin['kind']>('Rápida'); const [medicationId, setMedicationId] = useState(''); const [medicationTouched, setMedicationTouched] = useState(false); const [otherName, setOtherName] = useState(''); const [dose, setDose] = useState(''); const [doseConfirmed, setDoseConfirmed] = useState(false); const [mealId, setMealId] = useState('')
+  const [appointmentSnapshot, setAppointmentSnapshot] = useState<Appointment>()
   const [attendanceType, setAttendanceType] = useState(existing?.attendanceType || ''); const [attendanceTypeOther, setAttendanceTypeOther] = useState(existing?.attendanceTypeOther || '')
   const [activity, setActivity] = useState(''); const [startDate, setStartDate] = useState(() => localInput().slice(0, 10)); const [startTime, setStartTime] = useState(''); const [endDate, setEndDate] = useState(() => localInput().slice(0, 10)); const [endTime, setEndTime] = useState(''); const [hydratedId, setHydratedId] = useState<string>(); const [dirty, setDirty] = useState(false)
-  useEffect(() => { if (!existing) return; const effectiveAt = kind === 'treino' ? existing.startedAt : existing.at; setAt(localInput(effectiveAt)); setContext(existing.context || 'Não informado'); setContextTouched(false); setLinkedMealId(existing.mealId || ''); if (kind === 'insulina') { setInsulinKind(existing.kind); setMedicationId(existing.medicationId || ''); setMedicationTouched(true); setOtherName(existing.medicationId === 'other' ? existing.medicationName || '' : ''); setDose(String(existing.dose)); setMealId(existing.mealId || ''); setDoseConfirmed(false) }; if (kind === 'consulta') { setAttendanceType(existing.attendanceType || ''); setAttendanceTypeOther(existing.attendanceTypeOther || '') }; if (kind === 'treino') { setActivity(existing.activity); const start = localInput(existing.startedAt); setStartDate(start.slice(0, 10)); setStartTime(start.slice(11)); const end = existing.endedAt ? localInput(existing.endedAt) : start; setEndDate(end.slice(0, 10)); setEndTime(existing.endedAt ? end.slice(11) : '') }; setHydratedId(existing.id); setDirty(false) }, [existing?.id])
+  useEffect(() => { if (!existing) return; const effectiveAt = kind === 'treino' ? existing.startedAt : existing.at; setAt(localInput(effectiveAt)); setContext(existing.context || 'Não informado'); setContextTouched(false); setLinkedMealId(existing.mealId || ''); if (kind === 'insulina') { setInsulinKind(existing.kind); setMedicationId(existing.medicationId || ''); setMedicationTouched(true); setOtherName(existing.medicationId === 'other' ? existing.medicationName || '' : ''); setDose(String(existing.dose)); setMealId(existing.mealId || ''); setDoseConfirmed(false) }; if (kind === 'consulta') { setAppointmentSnapshot(structuredClone(existing)); setAttendanceType(existing.attendanceType || ''); setAttendanceTypeOther(existing.attendanceTypeOther || '') }; if (kind === 'treino') { setActivity(existing.activity); const start = localInput(existing.startedAt); setStartDate(start.slice(0, 10)); setStartTime(start.slice(11)); const end = existing.endedAt ? localInput(existing.endedAt) : start; setEndDate(end.slice(0, 10)); setEndTime(existing.endedAt ? end.slice(11) : '') }; setHydratedId(existing.id); setDirty(false) }, [existing?.id])
   useEffect(() => { if (!dirty) return; const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }; window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn) }, [dirty])
   const candidate = recentMeal(meals, at)
   const contextSuggestion = glucoseContextSuggestion(meals, workouts, at)
@@ -71,11 +73,11 @@ function ClinicalRecordForm({ kind }: { kind: Exclude<RecordKind, 'refeicao'> })
   if (editing && (existing === undefined || (existing && hydratedId !== existing.id))) return <Layout><h1>Carregando registro…</h1></Layout>
   if (editing && !existing) return <Layout><Link to="/historico" className="muted">← Voltar</Link><section className="card"><h1>Registro não encontrado</h1></section></Layout>
   const submit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const form = new FormData(event.currentTarget); const text = (name: string) => String(form.get(name) ?? '').trim(); void run(async () => {
-    const effectiveAt = kind === 'treino' ? toIso(`${startDate}T${startTime}`) : kind === 'consulta' ? appointmentIso(at) : toIso(at); let update: object
+    const effectiveAt = kind === 'treino' ? toIso(`${startDate}T${startTime}`) : kind === 'consulta' ? existing && at === localInput(existing.at) ? existing.at : appointmentIso(at) : toIso(at); let update: object
     if (kind === 'glicemia') { const value = glucoseValue(String(form.get('value') ?? '')); update = { value, at: effectiveAt, context, note: text('note') || undefined, mealId: context === 'Após refeição' ? linkedMealId || undefined : undefined, episodeId: existing?.episodeId || params.get('episode') || undefined } }
     else if (kind === 'insulina') { const quantity = insulinDose(dose); if (!doseConfirmed) throw new ValidationError('Confirme que esta dose corresponde à quantidade efetivamente aplicada.'); if (medicationId === 'other' && !cleanName(otherName)) throw new ValidationError('Informe o nome da insulina utilizada.'); update = { kind: insulinKind, dose: quantity, at: effectiveAt, note: text('note') || undefined, medicationId: medicationId || undefined, medicationName: medication?.name || (medicationId === 'other' ? cleanName(otherName) : undefined), medicationKey: identity, mealId: insulinKind === 'Rápida' ? mealId || undefined : undefined } }
     else if (kind === 'treino') { const name = cleanName(activity); if (!name) throw new ValidationError('Informe uma atividade.'); const endedAt = endTime ? toIso(`${endDate}T${endTime}`) : undefined; if (endedAt && endedAt < effectiveAt) throw new ValidationError('O término não pode anteceder o início. Confira também a data de término.'); update = { activity: name, startedAt: effectiveAt, endedAt, note: text('note') || undefined } }
-    else { if (attendanceType === 'other' && !attendanceTypeOther.trim()) throw new ValidationError('Informe o tipo de atendimento.'); update = { at: effectiveAt, attendanceType: attendanceType || undefined, attendanceTypeOther: attendanceType === 'other' ? attendanceTypeOther.trim() : undefined, professional: text('professional') || undefined, location: text('location') || undefined, note: text('note') || undefined } }
+    else { if (attendanceType === 'other' && !attendanceTypeOther.trim()) throw new ValidationError('Informe o tipo de atendimento.'); update = { at: effectiveAt, attendanceType: attendanceType || undefined, attendanceTypeOther: attendanceType === 'other' ? attendanceTypeOther.trim() : undefined, professional: text('professional') || undefined, location: text('location') || undefined, note: existing?.note } }
     const recordTable = (db as any)[table]
     const persist = async () => {
       if ('mealId' in update && typeof update.mealId === 'string' && update.mealId !== existing?.mealId) {
@@ -85,7 +87,10 @@ function ClinicalRecordForm({ kind }: { kind: Exclude<RecordKind, 'refeicao'> })
       if (existing) await recordTable.put({ ...existing, ...update, updatedAt: now() }); else await recordTable.add(stamp(update))
     }
     if (kind === 'glicemia' || kind === 'insulina') await db.transaction('rw', [recordTable, db.meals], persist)
-    else await persist()
+    else if (kind === 'consulta' && existing) {
+      try { await editAppointment(appointmentSnapshot!, update) }
+      catch (cause) { if (cause instanceof AppointmentError) throw new ValidationError(cause.message); throw cause }
+    } else await persist()
     nav('/', { replace: true, state: { success: editing ? 'Alterações salvas neste dispositivo.' : 'Registro salvo neste dispositivo.' } })
   }) }
   const canLeave = () => !dirty || window.confirm('Há alterações não salvas. Deseja sair sem salvar?')

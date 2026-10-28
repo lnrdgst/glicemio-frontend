@@ -26,7 +26,7 @@ function validate(table: BackupTable, record: unknown) {
   if (table === 'insulin') { const dose = record.dose; return (record.kind === 'Rápida' || record.kind === 'Basal/lenta') && typeof dose === 'number' && number(dose) && dose > 0 && date(record.at) && (record.mealId === undefined || text(record.mealId)) }
   if (table === 'workouts') return text(record.activity) && date(record.startedAt) && (record.endedAt === undefined || date(record.endedAt))
   if (table === 'episodes') return date(record.startedAt) && (record.endedAt === undefined || date(record.endedAt)) && list(record.symptoms) && record.symptoms.every(value => typeof value === 'string')
-  return date(record.at)
+  return date(record.at) && (record.attendanceConfirmed === undefined || typeof record.attendanceConfirmed === 'boolean')
 }
 
 function dataFrom(value: unknown): { data: BackupData; sourceVersion: 'legacy' | 1 | 2 } {

@@ -14,7 +14,7 @@ export type Glucose = Base & { value: number; at: string; context?: string; note
 export type Insulin = Base & { kind: 'Rápida'|'Basal/lenta'; dose: number; at: string; note?: string; mealId?: ID; medicationId?: string; medicationName?: string; medicationKey?: string }
 export type Workout = Base & { activity: string; startedAt: string; endedAt?: string; note?: string; source?: string; externalReference?: string }
 export type Episode = Base & { startedAt: string; endedAt?: string; symptoms: string[]; note?: string }
-export type Appointment = Base & { at: string; attendanceType?: 'general'|'endocrinologist'|'nutritionist'|'ophthalmologist'|'other'; attendanceTypeOther?: string; professional?: string; location?: string; note?: string }
+export type Appointment = Base & { at: string; attendanceType?: 'general'|'endocrinologist'|'nutritionist'|'ophthalmologist'|'other'; attendanceTypeOther?: string; attendanceConfirmed?: boolean; professional?: string; location?: string; note?: string }
 export class GlicopontoDB extends Dexie {
  profiles!: Table<Profile>; meals!: Table<Meal>; glucose!: Table<Glucose>; insulin!: Table<Insulin>; workouts!: Table<Workout>; episodes!: Table<Episode>; appointments!: Table<Appointment>
  foods!: Table<Food>; mealItems!: Table<MealItem>

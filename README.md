@@ -33,6 +33,16 @@ Antes da escrita, todas as tabelas são comparadas novamente com a prévia dentr
 
 O campo opcional de referência temporal não exige novo índice nem reescrita dos registros. O backup `glicoponto-backup` versão 2 preserva e valida esse metadado e aceita os arquivos anteriores sem atribuir um significado presumido. Ao editar uma refeição sem mudar o horário exibido, a string `at` original é preservada, incluindo segundos, milissegundos e offset. A classificação inclui alimentos e itens na conferência de integridade, sem alterá-los.
 
+## Comparecimento e exportação para acompanhamento endocrinológico
+
+Consultas podem ter `attendanceConfirmed?: boolean`: somente `true` confirma comparecimento. Ausência ou `false` não significam falta. Na Home, a pergunta contextual aparece a partir do horário agendado e durante as próximas 48 horas, para a consulta pendente mais recente. **Compareci** preserva o horário original; **Agora não** adia por 24 horas, como preferência local de interface que não integra o backup. Confirmação retroativa e reversão ficam nos detalhes, acessíveis pelo Histórico. Consultas confirmadas exigem desfazer a confirmação antes de alterar seu horário.
+
+Em **Ajustes → Dados e backup**, **Exportar todos os dados** mantém o backup completo. **Exportar desde a última consulta com o endocrinologista** considera exclusivamente `attendanceType === 'endocrinologist'`, `attendanceConfirmed === true` e `at` válido e não futuro. Seleciona inicialmente a mais recente por `at` e permite escolher outra endocrinológica confirmada. Outras especialidades, campos desconhecidos e o texto de “Outro” nunca são classificados como Endocrinologista.
+
+O recorte vai de 00h00 do dia local da consulta até o instante da geração, usando snapshot transacional e sem escrever na base. Inclui durações sobrepostas e as dependências necessárias (refeições, episódios, itens, alimentos e perfil). UUIDs, horários, revisões, quantidades, nomes históricos e exclusões lógicas são preservados. Estrutura e relações são validadas no próprio arquivo; inconsistências bloqueiam o download parcial sem reparos silenciosos. O recorte serve para análise e não substitui o backup integral.
+
+Dexie continua v3, JSON continua `glicoponto-backup` v2 com nove coleções, e arquivos anteriores sem o estado continuam aceitos. Restauração mantém as regras existentes: diferenças no comparecimento de uma consulta do mesmo UUID são conflitos, sem sobrescrita automática. Não há exportação automática ao confirmar nem data da última exportação como fonte de referência. Detalhes da entrega e validação em [docs/appointments-export-review.md](docs/appointments-export-review.md).
+
 ## Base local de refeições estruturadas — Dexie v3 e backup v2
 
 Referência: `docs/meals-domain.md` do backend, commit `362836a`. A versão 3 apenas cria duas tabelas vazias; não possui callback de transformação, não renomeia o banco nem interpreta descrições antigas. O formulário e as sete coleções anteriores conservam seus modelos e funcionamento.

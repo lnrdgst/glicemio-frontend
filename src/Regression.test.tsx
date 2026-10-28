@@ -116,7 +116,7 @@ it('mostra uma única consulta futura ou o estado vazio sem incluir consultas pa
   const view = open('/')
   await screen.findAllByText('Oftalmologista')
   expect(document.querySelectorAll('.home-appointment')).toHaveLength(1)
-  expect(screen.queryByText('Clínico geral')).toBeNull()
+  expect([...document.querySelectorAll('.home-appointment')].some(item => item.textContent?.includes('Clínico geral'))).toBe(false)
   view.unmount(); await db.appointments.delete(future.id)
   open('/')
   await screen.findByRole('heading', { name: 'Olá, Perfil de teste' })
@@ -181,7 +181,7 @@ it('exporta JSON completo incluindo legados, sem modificar o armazenamento', asy
   const create = vi.fn((_blob: Blob) => 'blob:test'), revoke = vi.fn()
   vi.stubGlobal('URL', class extends URL { static createObjectURL = create; static revokeObjectURL = revoke })
   const download = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
-  open('/mais'); await userEvent.click(screen.getByRole('button', { name: 'Exportar JSON' }))
+  open('/mais'); await userEvent.click(screen.getByRole('button', { name: 'Exportar todos os dados' }))
   await waitFor(() => expect(download).toHaveBeenCalledOnce())
   const blob = create.mock.calls[0][0] as unknown as Blob
   const text = await new Promise<string>(resolve => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.readAsText(blob) })

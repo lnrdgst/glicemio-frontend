@@ -5,6 +5,14 @@ import { useLocalClock } from './useLocalClock'
 
 afterEach(() => { cleanup(); vi.useRealTimers() })
 
+it('reavalia exatamente no horário agendado sem esperar o próximo ciclo de 30 segundos', () => {
+  vi.useFakeTimers(); vi.setSystemTime(new Date(2026, 9, 27, 14))
+  const boundary = Date.now() + 5_000
+  const { result } = renderHook(() => useLocalClock(boundary))
+  act(() => { vi.advanceTimersByTime(4_999) }); expect(result.current.getTime()).toBe(boundary - 5_000)
+  act(() => { vi.advanceTimersByTime(1) }); expect(result.current.getTime()).toBe(boundary)
+})
+
 it('atualiza sem interação à meia-noite e depois a cada 30 segundos', () => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date(2026, 11, 31, 23, 59, 59, 500))

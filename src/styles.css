@@ -240,6 +240,15 @@ select.field { text-overflow: ellipsis; }
 .more-card > .home-card-heading h2 { color:#D98A60; font-weight:500; }
 .more-card .actions { margin: 0; }
 .backup-actions { display:grid; gap:12px; }
+.endocrinology-export { display:grid; gap:12px; min-width:0; }
+.export-option { text-align:left; white-space:normal; width:100%; }
+.endocrinology-export .field { min-width:0; text-overflow:ellipsis; }
+.endocrinology-export p, .appointment-attendance p { overflow-wrap:anywhere; }
+.appointment-attendance { border-left:2px solid var(--quick-appointment); margin:16px 0; padding:4px 0 4px 12px; }
+.appointment-attendance > p { color:var(--color-muted); font-size:.9rem; margin:6px 0; }
+.appointment-attendance .actions { margin-top:12px; }
+.appointment-attendance button, .appointment-attendance-details button { min-height:44px; white-space:normal; }
+.appointment-attendance-details { border-top:1px solid #39322e; padding:8px 0 16px; }
 .backup-file { display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
 .backup-file input { display:none; }
 .backup-preview { border:1px solid #574c46; border-radius:12px; padding:12px; }
