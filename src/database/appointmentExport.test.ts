@@ -45,6 +45,20 @@ it('inclui pais fora do período, itens removidos, alimentos arquivados e duraç
   await restoreBackup(preview, 'restore'); expect((await exportBackup()).data).toEqual(result.backup.data)
 })
 
+it('exporta fatias no recorte para análise e restaura sem conversão nem perda decimal', async () => {
+  await addReference()
+  const meal = stamp({ at: local(27, 12), kind: 'Lanche' }), food = stamp({ name: 'Ricota atual', revision: 1 })
+  const item = stamp({ mealId: meal.id, foodId: food.id, foodName: 'Ricota consumida', quantity: '999999999999.999999', unit: 'slice' as const, revision: 1 })
+  await db.meals.add(meal); await db.foods.add(food); await db.mealItems.add(item)
+  const before = (await exportBackup()).data, { backup } = await exportSinceEndocrinology()
+  expect(backup.version).toBe(2)
+  expect(backup.data.mealItems).toEqual([item])
+  expect((await exportBackup()).data).toEqual(before)
+  await Promise.all(db.tables.map(table => table.clear()))
+  await restoreBackup(await previewBackup(JSON.stringify(backup)), 'restore')
+  expect((await exportBackup()).data).toEqual(backup.data)
+})
+
 it('bloqueia órfãos, refeições excluídas referenciadas e intervalos inválidos sem alterar a base', async () => {
   await addReference(); await db.glucose.add(stamp({ at: local(27, 1), value: 100, mealId: 'ausente' }))
   const before = await exportBackup(); await expect(exportSinceEndocrinology()).rejects.toThrow(/inexistente/)

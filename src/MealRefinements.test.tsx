@@ -26,8 +26,8 @@ afterEach(() => { cleanup(); vi.restoreAllMocks() })
 it('ordena rótulos portugueses das unidades sem alterar códigos ou Selecionar', () => {
   render(<MealItemsEditor items={[emptyMealItem()]} onChange={() => {}} />)
   const options = within(screen.getByLabelText('Unidade')).getAllByRole('option') as HTMLOptionElement[]
-  expect(options.map(option => option.textContent)).toEqual(['Selecionar', 'Colher de chá', 'Colher de sopa', 'Grama (g)', 'Litro (L)', 'Miligrama (mg)', 'Mililitro (mL)', 'Porção', 'Quilograma (kg)', 'Unidade', 'Xícara'])
-  expect(options.map(option => option.value)).toEqual(['', 'tsp', 'tbsp', 'g', 'L', 'mg', 'mL', 'portion', 'kg', 'unit', 'cup'])
+  expect(options.map(option => option.textContent)).toEqual(['Selecionar', 'Colher de chá', 'Colher de sopa', 'Fatia', 'Grama (g)', 'Litro (L)', 'Miligrama (mg)', 'Mililitro (mL)', 'Porção', 'Quilograma (kg)', 'Unidade', 'Xícara'])
+  expect(options.map(option => option.value)).toEqual(['', 'tsp', 'tbsp', 'slice', 'g', 'L', 'mg', 'mL', 'portion', 'kg', 'unit', 'cup'])
 })
 
 it('filtra exclusões antes do limite da Home e resume somente tipo e horário em linhas', async () => {

@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { db, now, stamp, type Food, type MealItem } from './db'
+import { db, mealItemUnits, now, stamp, type Food, type MealItem } from './db'
 import { backupTables, exportBackup, parseBackup, previewBackup, restoreBackup, type BackupData } from './backup'
 
 const at = '2026-10-23T12:34:56.123456-03:00'
@@ -40,6 +40,34 @@ it('exporta e restaura as nove coleções v2 integralmente, inclusive decimais e
   expect(await snapshot()).toEqual(backup.data)
 })
 
+it('restaura v2 anterior com todas as unidades antigas junto de fatias locais sem regravar registros', async () => {
+  const meal = stamp({ kind: 'Lanche', at })
+  const consumed = { ...item(meal.id), unit: 'slice' as const, quantity: '1.000000' }
+  await db.meals.add(meal); await db.mealItems.add(consumed)
+  const oldBackup = await exportBackup()
+  oldBackup.data.meals = [stamp({ kind: 'Almoço', at })]
+  oldBackup.data.mealItems = mealItemUnits.filter(unit => unit !== 'slice').map(unit => ({ ...item(oldBackup.data.meals[0].id), unit }))
+  const oldData = structuredClone(oldBackup.data)
+  const preview = await previewBackup(JSON.stringify(oldBackup))
+  expect(preview.relationshipErrors).toEqual([])
+  expect((await restoreBackup(preview, 'keep')).mealItems).toBe(10)
+  expect(await db.meals.get(meal.id)).toEqual(meal)
+  expect(await db.mealItems.get(consumed.id)).toEqual(consumed)
+  for (const record of oldData.mealItems) expect(await db.mealItems.get(record.id)).toEqual(record)
+  expect(oldBackup.data).toEqual(oldData)
+})
+
+it('preserva fatias removidas e nomes históricos na exportação e restauração v2', async () => {
+  const { meal, catalog } = await seed()
+  const consumed = { ...item(meal.id, catalog.id), unit: 'slice' as const, quantity: '0.000001', revision: 3, deletedAt: at }
+  await db.mealItems.add(consumed)
+  const backup = await exportBackup()
+  await clear()
+  await restoreBackup(await previewBackup(JSON.stringify(backup)), 'restore')
+  expect(await snapshot()).toEqual(backup.data)
+  expect(await db.mealItems.get(consumed.id)).toEqual(consumed)
+})
+
 it.each(['legacy', 1] as const)('importa backup %s sem novas coleções e sem converter descrições ou IDs antigos', async version => {
   await seed(); const original = await exportBackup()
   const data = Object.fromEntries(backupTables.filter(table => table !== 'foods' && table !== 'mealItems').map(table => [table, original.data[table]])) as Omit<BackupData, 'foods' | 'mealItems'>
@@ -68,7 +96,7 @@ it('exige as novas coleções no v2 e rejeita versões futuras sem nenhuma escri
 })
 
 it.each([
-  { quantity: 1.5 }, { quantity: '0' }, { quantity: '0.0000001' }, { unit: 'ml' },
+  { quantity: 1.5 }, { quantity: '0' }, { quantity: '0.0000001' }, { unit: 'ml' }, { unit: 'Slice' }, { unit: 'fatia' },
   { id: 'sem-uuid' }, { foodId: 'sem-uuid' }, { mealId: 'sem-uuid' }, { foodName: ' ' }, { revision: 0 },
 ])('rejeita item inválido no backup: %j', async update => {
   const backup = await exportBackup()

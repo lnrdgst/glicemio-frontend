@@ -27,7 +27,7 @@ describe('contratos locais de alimentos e itens', () => {
     expect(item.quantity).toBe('2.5')
     expect(item.unit).toBe(unit)
   })
-  it.each(['ml', 'G', 'gramas', '', 'bowl'])('rejeita código de unidade %s', unit => {
+  it.each(['ml', 'G', 'gramas', '', 'bowl', 'Slice', 'slices', 'fatia'])('rejeita código de unidade %s', unit => {
     expect(isMealItem({ ...makeItem(makeMeal().id), unit })).toBe(false)
   })
   it('valida UUIDs apenas dos modelos novos, nomes e metadados de precisão exata', () => {
